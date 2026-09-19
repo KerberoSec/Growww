@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"time"
+	
 )
 
 type SGFDefaultWaterfall struct {

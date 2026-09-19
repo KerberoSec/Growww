@@ -87,3 +87,12 @@ func (a *APIKeyAuthorizer) AuthorizeRequest(rawKey, clientIP string, requiredPer
 
 	return nil
 }
+
+// RegisterKey computes the hash and registers the API key metadata
+func (a *APIKeyAuthorizer) RegisterKey(rawKey string, meta APIKeyMetadata) {
+	hash := sha256.Sum256([]byte(rawKey))
+	meta.KeyHash = hex.EncodeToString(hash[:])
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.keys[meta.KeyHash] = meta
+}

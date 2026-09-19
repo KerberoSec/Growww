@@ -104,5 +104,6 @@ func (s *USDTSweeper) ExecutePendingSweeps(ctx context.Context) ([]string, error
 
 func main() {
 	sweeper := NewUSDTSweeper()
+	_ = sweeper
 	fmt.Println("USDT Multichain Sweeping Service ready.")
 }

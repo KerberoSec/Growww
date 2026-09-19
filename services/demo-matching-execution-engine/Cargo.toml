@@ -1,0 +1,12 @@
+[package]
+name = "demo-matching-execution-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Growww Sovereign Exchange Architecture Team"]
+description = "Demo CLOB matching simulator with simulated liquidity bots, PnL analytics, and virtual execution"
+
+[dependencies]
+
+[lib]
+name = "demo_matching_execution_engine"
+path = "src/lib.rs"

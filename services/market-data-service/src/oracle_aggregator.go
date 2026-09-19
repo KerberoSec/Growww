@@ -131,6 +131,6 @@ func (a *OracleAggregator) GetArbitratedPrice(symbol string) (*AggregatedPrice, 
 }
 
 func main() {
-	agg := NewOracleAggregator(15, 150)
+	_ = NewOracleAggregator(15, 150)
 	fmt.Println("Oracle Aggregator & Feed Arbiter Service running.")
 }
