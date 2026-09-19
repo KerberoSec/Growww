@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message TrailingStopConfig {
+  string symbol = 1;
+  double trail_offset_pct = 2;
+  double activation_price = 3;
+}
+
+service TrailingStopService {
+  rpc SetTrailingStop(TrailingStopConfig) returns (TrailingStopConfig);
+}
