@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "besu-node.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "besu-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: p2p
+      port: {{ .Values.network.p2pPort }}
+      targetPort: {{ .Values.network.p2pPort }}
+      protocol: TCP
+    {{- if ne .Values.nodeProfile "validator" }}
+    - name: rpc-http
+      port: {{ .Values.network.rpcHttpPort }}
+      targetPort: {{ .Values.network.rpcHttpPort }}
+      protocol: TCP
+    - name: rpc-ws
+      port: {{ .Values.network.rpcWsPort }}
+      targetPort: {{ .Values.network.rpcWsPort }}
+      protocol: TCP
+    {{- end }}
+    - name: metrics
+      port: {{ .Values.network.metricsPort }}
+      targetPort: {{ .Values.network.metricsPort }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "besu-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "besu-node.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "besu-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/role: {{ .Values.nodeProfile }}
+spec:
+  serviceName: {{ include "besu-node.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "besu-node.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "besu-node.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: {{ .Values.nodeProfile }}
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.security.runAsUser }}
+        runAsGroup: {{ .Values.security.runAsGroup }}
+        fsGroup: {{ .Values.security.fsGroup }}
+      containers:
+        - name: besu
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "besu"
+            - "--config-file=/etc/besu/config.toml"
+          ports:
+            - name: p2p
+              containerPort: {{ .Values.network.p2pPort }}
+            - name: metrics
+              containerPort: {{ .Values.network.metricsPort }}
+            {{- if ne .Values.nodeProfile "validator" }}
+            - name: rpc-http
+              containerPort: {{ .Values.network.rpcHttpPort }}
+            - name: rpc-ws
+              containerPort: {{ .Values.network.rpcWsPort }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/besu
+            - name: data-volume
+              mountPath: /var/lib/besu/data
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "besu-node.fullname" . }}-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data-volume
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.storage.className }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.size }}

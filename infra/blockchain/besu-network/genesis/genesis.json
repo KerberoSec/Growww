@@ -1,0 +1,67 @@
+{
+  "config": {
+    "chainId": 13370,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "shanghaiBlock": 0,
+    "cancunBlock": 0,
+    "zeroBaseFee": true,
+    "fixedBaseFee": 0,
+    "qbft": {
+      "blockperiodseconds": 2,
+      "epochlength": 30000,
+      "requesttimeoutseconds": 4,
+      "validatorcontractaddress": "0x0000000000000000000000000000000000007777",
+      "validators": [
+        "0x9e8b7c6d5e4f3a2b1c0d9e8b7c6d5e4f3a2b1c01",
+        "0x8d7c6b5a4f3e2d1c0b9a8d7c6b5a4f3e2d1c0b02",
+        "0x7c6b5a4d3e2f1c0a9b8c7c6b5a4d3e2f1c0a9b03",
+        "0x6b5a4d3c2e1f0a9b8c7d6b5a4d3c2e1f0a9b8c04"
+      ]
+    },
+    "permissions": {
+      "node": "0x0000000000000000000000000000000000008888",
+      "account": "0x0000000000000000000000000000000000009999"
+    }
+  },
+  "nonce": "0x0",
+  "timestamp": "0x66000000",
+  "extraData": "0xf87aa00000000000000000000000000000000000000000000000000000000000000000949e8b7c6d5e4f3a2b1c0d9e8b7c6d5e4f3a2b1c01948d7c6b5a4f3e2d1c0b9a8d7c6b5a4f3e2d1c0b02947c6b5a4d3e2f1c0a9b8c7c6b5a4d3e2f1c0a9b03946b5a4d3c2e1f0a9b8c7d6b5a4d3c2e1f0a9b8c04c880c0",
+  "gasLimit": "0x1fffffffffffff",
+  "difficulty": "0x1",
+  "mixHash": "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
+  "alloc": {
+    "0x9e8b7c6d5e4f3a2b1c0d9e8b7c6d5e4f3a2b1c01": {
+      "comment": "Validator 1 (Growww Core Entity - Mumbai ap-south-1)",
+      "balance": "0x1000000000000000000000000000"
+    },
+    "0x8d7c6b5a4f3e2d1c0b9a8d7c6b5a4f3e2d1c0b02": {
+      "comment": "Validator 2 (Custodian Depository Partner - GIFT City)",
+      "balance": "0x1000000000000000000000000000"
+    },
+    "0x7c6b5a4d3e2f1c0a9b8c7c6b5a4d3e2f1c0a9b03": {
+      "comment": "Validator 3 (Clearing Corporation - Mumbai DC)",
+      "balance": "0x1000000000000000000000000000"
+    },
+    "0x6b5a4d3c2e1f0a9b8c7d6b5a4d3c2e1f0a9b8c04": {
+      "comment": "Validator 4 (GIFT City International Gateway)",
+      "balance": "0x1000000000000000000000000000"
+    },
+    "0x0000000000000000000000000000000000008888": {
+      "comment": "NodeRules On-Chain Permissioning Contract",
+      "balance": "0x0"
+    },
+    "0x0000000000000000000000000000000000009999": {
+      "comment": "AccountRules On-Chain Permissioning Contract",
+      "balance": "0x0"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+# Besu Node Helm Values
+
+nodeProfile: "validator" # validator | rpc-relayer | observer-node
+
+image:
+  repository: "hyperledger/besu"
+  tag: "24.1.0"
+  pullPolicy: "IfNotPresent"
+
+replicaCount: 1
+
+network:
+  chainId: 13370
+  p2pPort: 30303
+  rpcHttpPort: 8545
+  rpcWsPort: 8546
+  metricsPort: 9545
+  bootnodes:
+    - "enode://9e8b7c6d5e4f3a2b1c0d9e8b7c6d5e4f3a2b1c01@10.0.1.10:30303"
+    - "enode://8d7c6b5a4f3e2d1c0b9a8d7c6b5a4f3e2d1c0b02@10.0.2.10:30303"
+
+security:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+
+resources:
+  requests:
+    cpu: "4"
+    memory: "8Gi"
+  limits:
+    cpu: "8"
+    memory: "16Gi"
+
+storage:
+  className: "gp3"
+  size: "500Gi"
+  iops: 3000
+  throughput: 125
+
+config:
+  logging: "INFO"
+  dataStorageFormat: "BONSAI"
+  syncMode: "FULL"
+  permissionsNodesContractEnabled: true
+  permissionsAccountsContractEnabled: true
+  metricsEnabled: true
+
+ingress:
+  enabled: true
+  tlsEnabled: true
+  mTLSEnabled: true
