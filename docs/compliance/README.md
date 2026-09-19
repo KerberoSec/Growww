@@ -8,11 +8,13 @@ Welcome to the sovereign regulatory and statutory compliance documentation repos
 
 | Document | Regulatory Authority | Statutory Scope | Primary Mandate |
 | :--- | :--- | :--- | :--- |
+| **[Domestic KYC/AML Policy](./kyc_aml_domestic_policy.md)** | SEBI / FIU-IND / UIDAI | PMLA 2002 / SEBI Master Circular | 4-step domestic onboarding, PAN verification, Aadhaar Data Vault 8-digit masking, CKYCR, penny drop name matching, AML risk matrix, Besu zero-PII commitment |
 | **[SEBI Regulatory Sandbox Application](./SEBI_REGULATORY_SANDBOX_APPLICATION.md)** | Securities and Exchange Board of India (SEBI) | FinTech Regulatory Sandbox (Stage II) | 24/7 continuous trading pilot, tokenized G-Secs/equities, atomic DvP settlement, 10,000 investor cap |
 | **[IFSCA GIFT City FinTech Dossier](./IFSCA_GIFT_CITY_FINTECH_DOSSIER.md)** | International Financial Services Centres Authority (IFSCA) | GIFT City Special Economic Zone | Cross-border foreign capital ingress, multi-currency escrow (USD/EUR), Section 47 tax neutrality |
 | **[RBI Digital Rupee Integration Charter](./RBI_EDIGITAL_RUPEE_CBDC_INTEGRATION_CHARTER.md)** | Reserve Bank of India (RBI) | Payment and Settlement Systems Act 2007 | 24/7 wholesale e₹ (CBDC) settlement rails, 1:1 backing invariant, zero fractional reserve |
 | **[FIU-IND AML/CFT & PMLA Rulebook](./FIU_IND_AML_CFT_AND_PMLA_RULEBOOK.md)** | Financial Intelligence Unit - India (FIU-IND) | Prevention of Money Laundering Act 2002 | Central KYC (CKYC), PEP screening, FINnet 2.0 STR filings, FATF Travel Rule for crypto ingress |
 | **[DPDP Act 2023 Privacy Charter](./DPDP_ACT_2023_DATA_PROTECTION_AND_PRIVACY_CHARTER.md)** | Data Protection Board of India (DPBI) | Digital Personal Data Protection Act 2023 | Zero-PII blockchain state, Poseidon ZK identity commitments, HSM crypto-shredding erasure |
+| **[International Investor KYC/AML Policy](./kyc_aml_foreign_policy.md)** | International Financial Services Centres Authority (IFSCA) | IFSCA AML/CFT/KYC Guidelines 2022 / FATF | Foreign investor 5-stage onboarding, ICAO 9303 MRZ, 3D biometric PAD, FATCA/CRS, OFAC/UN screening, Besu zero-PII commitment |
 
 ---
 

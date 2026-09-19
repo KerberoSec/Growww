@@ -1,0 +1,545 @@
+# ==============================================================================
+# Growww / NBSE Investor Protection & Suitability Assessment Matrix Schema
+# File: docs/compliance/suitability_matrix.yaml
+# Specification ID: SPEC-COMP-009-SUIT
+# Schema Version: 1.0.0
+# Regulatory Governance: SEBI Investor Protection Regulations & IFSCA Conduct of Business Rules 2022
+# ==============================================================================
+
+suitability_framework:
+  version: "1.0.0"
+  effective_date: "2026-09-19"
+  max_score: 100
+  min_score: 0
+  passing_threshold_live_trading: 20
+  cooling_period_hours_on_retake: 72
+  reassessment_interval_days: 365
+  scoring_model: "WEIGHTED_ADDITIVE_POINT_INDEX"
+  formula_expression: "Score = SUM(questions[i].selected_option.score * questions[i].weight)"
+  formula_latex: "S_{total} = \\sum_{i=1}^{8} (s_i \\times w_i) \\quad \\text{where } \\sum_{i=1}^{8} w_i = 1.00"
+
+  tiers:
+    - tier: "CONSERVATIVE"
+      tier_id: "TIER_CONSERVATIVE"
+      min_score: 0
+      max_score: 40
+      risk_profile: "Low Risk Tolerance / Capital Preservation"
+      allowed_asset_classes:
+        - "NIFTY_50_INDEX_CONSTITUENTS"
+        - "SOVEREIGN_G_SECS_T_BILLS"
+      disallowed_asset_classes:
+        - "MID_CAP_EQUITIES"
+        - "SMALL_CAP_EQUITIES"
+        - "DERIVATIVES_PERPETUALS"
+        - "VDA_CRYPTO_ASSETS"
+      max_single_order_inr: 25000.00
+      max_daily_turnover_inr: 50000.00
+      max_portfolio_exposure_inr: 200000.00
+      permitted_order_types:
+        - "LIMIT"
+        - "MARKET"
+      market_order_collar_percent: 1.0
+      leverage_allowed: 1.0
+      margin_trading_permitted: false
+      fractional_shares_permitted: true
+      reassessment_frequency_months: 6
+      requires_additional_risk_warning: true
+      warning_text: "You have a Conservative investor profile. Trading is restricted to NIFTY 50 blue-chip equities and sovereign government securities with capped order sizes."
+
+    - tier: "MODERATE"
+      tier_id: "TIER_MODERATE"
+      min_score: 41
+      max_score: 75
+      risk_profile: "Balanced Growth / Moderate Volatility Tolerance"
+      allowed_asset_classes:
+        - "NIFTY_100_CONSTITUENTS"
+        - "LARGE_CAP_EQUITIES"
+        - "SOVEREIGN_G_SECS_T_BILLS"
+        - "TOP_50_LIQUID_EQUITIES"
+      disallowed_asset_classes:
+        - "MICRO_CAP_EQUITIES"
+        - "DERIVATIVES_PERPETUALS"
+        - "VDA_CRYPTO_ASSETS"
+      max_single_order_inr: 100000.00
+      max_daily_turnover_inr: 250000.00
+      max_portfolio_exposure_inr: 1000000.00
+      permitted_order_types:
+        - "LIMIT"
+        - "MARKET"
+        - "STOP_LOSS_LIMIT"
+        - "STOP_LOSS_MARKET"
+      market_order_collar_percent: 2.0
+      leverage_allowed: 1.0
+      margin_trading_permitted: false
+      fractional_shares_permitted: true
+      reassessment_frequency_months: 12
+      requires_additional_risk_warning: false
+      warning_text: "You have a Moderate investor profile. Trading is enabled for broad-market large-cap equities up to sandbox cohort investment thresholds."
+
+    - tier: "AGGRESSIVE"
+      tier_id: "TIER_AGGRESSIVE"
+      min_score: 76
+      max_score: 100
+      risk_profile: "High Risk Tolerance / Maximum Capital Growth"
+      allowed_asset_classes:
+        - "ALL_LISTED_EQUITIES"
+        - "NIFTY_500_CONSTITUENTS"
+        - "MID_CAP_EQUITIES"
+        - "SMALL_CAP_EQUITIES"
+        - "SOVEREIGN_G_SECS_T_BILLS"
+      disallowed_asset_classes:
+        - "UNREGULATED_SYNTHETICS"
+      max_single_order_inr: 500000.00
+      max_daily_turnover_inr: 1000000.00
+      max_portfolio_exposure_inr: 2500000.00
+      permitted_order_types:
+        - "LIMIT"
+        - "MARKET"
+        - "STOP_LOSS_LIMIT"
+        - "STOP_LOSS_MARKET"
+        - "OCO"
+        - "TRAILING_STOP"
+        - "ICEBERG"
+        - "TWAP"
+      market_order_collar_percent: 3.0
+      leverage_allowed: 1.0
+      margin_trading_permitted: false
+      fractional_shares_permitted: true
+      reassessment_frequency_months: 12
+      requires_additional_risk_warning: false
+      warning_text: "You have an Aggressive investor profile. Full access granted across all listed equities subject to negative balance protection and exchange price collars."
+
+# ------------------------------------------------------------------------------
+# 8-Question Diagnostic Suitability Assessment Battery
+# ------------------------------------------------------------------------------
+suitability_questions:
+  - id: "Q1_DEMOGRAPHIC_AGE"
+    category: "DEMOGRAPHICS_LIFE_STAGE"
+    weight: 0.10
+    question_text: "What is your current age category?"
+    rationale: "Assesses remaining human capital horizon and structural capacity to absorb market drawdown cycles."
+    options:
+      - option_id: "OPT_Q1_A"
+        label: "Above 60 years (Retirement Phase)"
+        score: 20
+        explanation: "Preservation of capital and retirement liquidity is paramount."
+      - option_id: "OPT_Q1_B"
+        label: "46 to 60 years (Pre-Retirement Phase)"
+        score: 50
+        explanation: "Moderate risk tolerance with shortening recovery timeframe."
+      - option_id: "OPT_Q1_C"
+        label: "31 to 45 years (Peak Earning Phase)"
+        score: 80
+        explanation: "High capacity for wealth accumulation and market resilience."
+      - option_id: "OPT_Q1_D"
+        label: "18 to 30 years (Early Career Phase)"
+        score: 100
+        explanation: "Maximum investment horizon with multi-decade compounding capacity."
+
+  - id: "Q2_GROSS_ANNUAL_INCOME"
+    category: "FINANCIAL_CAPACITY"
+    weight: 0.15
+    question_text: "What is your gross annual income bracket (in Indian Rupees)?"
+    rationale: "Evaluates financial standing to ensure market exposures do not threaten essential livelihoods."
+    options:
+      - option_id: "OPT_Q2_A"
+        label: "Below ₹3,00,000"
+        score: 20
+        explanation: "Limited disposable income; conservative capital preservation required."
+      - option_id: "OPT_Q2_B"
+        label: "₹3,00,000 to ₹10,00,000"
+        score: 50
+        explanation: "Moderate disposable capital; suitable for standard retail equity exposure."
+      - option_id: "OPT_Q2_C"
+        label: "₹10,00,000 to ₹25,00,000"
+        score: 80
+        explanation: "Upper-middle income bracket with comfortable discretionary investment surplus."
+      - option_id: "OPT_Q2_D"
+        label: "Above ₹25,00,000 (High Net Worth / Affluent)"
+        score: 100
+        explanation: "Substantial surplus income; high capacity to withstand market fluctuations."
+
+  - id: "Q3_INVESTMENT_OBJECTIVE"
+    category: "INVESTMENT_GOALS"
+    weight: 0.15
+    question_text: "What is your primary objective for investing capital on Growww?"
+    rationale: "Aligns asset catalog availability with the investor's intended financial outcomes."
+    options:
+      - option_id: "OPT_Q3_A"
+        label: "Capital Preservation (Protect principal against loss, zero volatility tolerance)"
+        score: 10
+        explanation: "Strict capital guarantee priority; restricted to risk-free sovereign debt and large-cap blue-chips."
+      - option_id: "OPT_Q3_B"
+        label: "Regular Income Generation (Dividends and yield with minimal capital risk)"
+        score: 45
+        explanation: "Preference for established dividend-paying blue chips and debt securities."
+      - option_id: "OPT_Q3_C"
+        label: "Balanced Wealth Growth (Moderate capital appreciation over cyclical market trends)"
+        score: 75
+        explanation: "Willingness to take calculated equity risk for inflation-beating returns."
+      - option_id: "OPT_Q3_D"
+        label: "Aggressive Capital Appreciation (Maximizing returns through high growth equities)"
+        score: 100
+        explanation: "Long-term compounding focus; accepting sharp cyclical swings."
+
+  - id: "Q4_INVESTMENT_HORIZON"
+    category: "LIQUIDITY_TIMEFRAME"
+    weight: 0.15
+    question_text: "What is your anticipated investment holding horizon before needing capital withdrawal?"
+    rationale: "Determines whether the client's timeframe can weather equity market corrections."
+    options:
+      - option_id: "OPT_Q4_A"
+        label: "Less than 6 months (Short-Term Liquidity Need)"
+        score: 10
+        explanation: "Short holding period introduces severe timing and sequencing risk in equity."
+      - option_id: "OPT_Q4_B"
+        label: "6 months to 2 years (Medium-Short Term)"
+        score: 40
+        explanation: "Vulnerable to intermediate market corrections; requires conservative positioning."
+      - option_id: "OPT_Q4_C"
+        label: "2 years to 5 years (Medium-Long Term)"
+        score: 75
+        explanation: "Sufficient window to navigate typical business and market cycles."
+      - option_id: "OPT_Q4_D"
+        label: "More than 5 years (Long Term)"
+        score: 100
+        explanation: "Optimal equity compounding horizon; dampens short-term volatility."
+
+  - id: "Q5_MARKET_EXPERIENCE"
+    category: "FINANCIAL_LITERACY"
+    weight: 0.15
+    question_text: "How much active experience do you have in trading or investing in capital markets?"
+    rationale: "Measures familiarity with order execution, price discovery, and market mechanics."
+    options:
+      - option_id: "OPT_Q5_A"
+        label: "No Experience (First-time investor / Novice)"
+        score: 15
+        explanation: "Requires introductory onboarding, demo simulation, and strict guardrails."
+      - option_id: "OPT_Q5_B"
+        label: "1 to 2 years (Invested in mutual funds or fixed deposits)"
+        score: 45
+        explanation: "Familiar with indirect market instruments, transitioning to direct equities."
+      - option_id: "OPT_Q5_C"
+        label: "3 to 5 years (Active equity investor on NSE/BSE)"
+        score: 80
+        explanation: "Sound practical understanding of direct equity volatility and order mechanics."
+      - option_id: "OPT_Q5_D"
+        label: "More than 5 years or Professional Financial Market Background"
+        score: 100
+        explanation: "Advanced market competence; fully cognizant of systemic and idiosyncratic risk."
+
+  - id: "Q6_FRACTIONAL_AND_DLT_LITERACY"
+    category: "TECHNOLOGY_AND_STRUCTURE"
+    weight: 0.10
+    question_text: "How familiar are you with fractional equity ownership and permissioned blockchain DvP settlement?"
+    rationale: "Verifies comprehension of platform-specific technology, internal crossing books, and depository escrow."
+    options:
+      - option_id: "OPT_Q6_A"
+        label: "Completely Unfamiliar (Do not understand fractionalization or distributed ledgers)"
+        score: 20
+        explanation: "Mandatory interactive educational module required prior to live order submission."
+      - option_id: "OPT_Q6_B"
+        label: "Basic (Understand that I own a fractional portion backed by whole depository shares)"
+        score: 50
+        explanation: "Understands fundamental backing and beneficial ownership entitlement."
+      - option_id: "OPT_Q6_C"
+        label: "Intermediate (Understand internal crossing liquidity and atomic on-chain settlement)"
+        score: 80
+        explanation: "Grasps atomic settlement DvP finality and secondary internal crossing mechanics."
+      - option_id: "OPT_Q6_D"
+        label: "Advanced (Comprehensive knowledge of DLT consensus, smart contracts, and trust custody)"
+        score: 100
+        explanation: "Expert technical understanding of cryptographic settlement guarantees."
+
+  - id: "Q7_DRAWDOWN_VOLATILITY_TOLERANCE"
+    category: "RISK_PSYCHOLOGY"
+    weight: 0.10
+    question_text: "If your equity portfolio drops 20% in market value over a two-week period, what would be your immediate reaction?"
+    rationale: "Diagnoses behavioral risk tolerance and panic-selling tendencies during sharp corrections."
+    options:
+      - option_id: "OPT_Q7_A"
+        label: "Panic and liquidate all holdings immediately to prevent further loss"
+        score: 10
+        explanation: "Low emotional and psychological risk capacity; restricted to conservative tier."
+      - option_id: "OPT_Q7_B"
+        label: "Feel extremely anxious and pause all further investment activities"
+        score: 40
+        explanation: "Vulnerable to stress during standard market volatility cycles."
+      - option_id: "OPT_Q7_C"
+        label: "Hold patiently, understanding that equity markets experience cyclical corrections"
+        score: 80
+        explanation: "Mature risk temperament capable of enduring temporary unrealized losses."
+      - option_id: "OPT_Q7_D"
+        label: "View the dip as an attractive buying opportunity and add to quality positions"
+        score: 100
+        explanation: "High psychological fortitude with counter-cyclical investing discipline."
+
+  - id: "Q8_EMERGENCY_RESERVE_ALLOCATION"
+    category: "PORTFOLIO_CONCENTRATION"
+    weight: 0.10
+    question_text: "What proportion of your total liquid financial assets are you allocating to this trading account?"
+    rationale: "Ensures investors maintain sufficient rainy-day reserves outside the equity platform."
+    options:
+      - option_id: "OPT_Q8_A"
+        label: "More than 50% of my total liquid savings (No separate emergency fund)"
+        score: 10
+        explanation: "Dangerous over-concentration; client at severe risk in emergencies."
+      - option_id: "OPT_Q8_B"
+        label: "25% to 50% of liquid savings (3 months emergency fund in fixed deposits/cash)"
+        score: 45
+        explanation: "Moderate concentration; basic emergency cushion maintained."
+      - option_id: "OPT_Q8_C"
+        label: "10% to 25% of liquid savings (6 months emergency fund held separately)"
+        score: 80
+        explanation: "Prudent asset allocation with well-capitalized liquid safety reserves."
+      - option_id: "OPT_Q8_D"
+        label: "Less than 10% of liquid savings (> 12 months emergency buffer held independently)"
+        score: 100
+        explanation: "Institutional-grade wealth management; zero threat to personal solvency."
+
+# ------------------------------------------------------------------------------
+# Pre-Trade Mandatory Consent & Audit Retention Matrix
+# ------------------------------------------------------------------------------
+pre_trade_consent_matrix:
+  framework_version: "1.0.0"
+  disclosure_version: "v1.0.0"
+  disclosure_content_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  display_mode: "UNSKIPPABLE_MODAL"
+  minimum_dwell_time_seconds: 10
+  scroll_to_bottom_required: true
+  individual_affirmation_checkboxes:
+    - checkbox_id: "CHK_MARKET_VOLATILITY"
+      label: "I acknowledge that equity investments are subject to market risks and principal loss."
+    - checkbox_id: "CHK_FRACTIONAL_LIQUIDITY"
+      label: "I understand that fractional shares trade via internal crossing liquidity and may have spread variations."
+    - checkbox_id: "CHK_DEPOSITORY_CUSTODY"
+      label: "I acknowledge that whole shares are held in omnibus escrow trust in CDSL/NSDL with 1:1 backing."
+    - checkbox_id: "CHK_DLT_FINALITY"
+      label: "I understand that atomic settlement is recorded on Hyperledger Besu with immutable block finality."
+    - checkbox_id: "CHK_TAX_LIABILITY"
+      label: "I accept sole responsibility for capital gains taxes under Income Tax Act Section 111A/112A and STT."
+  audit_logging:
+    storage_type: "WORM_S3_OBJECT_LOCK"
+    worm_mode: "COMPLIANCE"
+    retention_period_years: 5
+    signature_algorithm: "ECDSA_SECP256K1"
+    hardware_timestamping: "AWS_KMS_FIPS_140_2_LEVEL_3"
+    fields_captured:
+      - "user_uuid"
+      - "client_ip_address"
+      - "user_agent_hash"
+      - "device_fingerprint_sha256"
+      - "disclosure_version"
+      - "disclosure_content_sha256"
+      - "client_signature_der"
+      - "server_timestamp_iso8601"
+      - "kms_signature_bytes"
+
+# ------------------------------------------------------------------------------
+# Grievance Redressal SLA & Regulatory Sync Matrix
+# ------------------------------------------------------------------------------
+grievance_sla:
+  acknowledgement_hours: 2
+  first_response_hours: 24
+  internal_resolution_hours: 48
+  statutory_escalation_days: 7
+  regulatory_maximum_days: 21
+  regulatory_bodies: ["SEBI_SCORES", "IFSCA_SPARK"]
+  regulatory_gateways:
+    - name: "SEBI_SCORES"
+      system_name: "SEBI Complaints Redress System 2.0"
+      regulatory_authority: "Securities and Exchange Board of India"
+      protocol: "REST_MTLS"
+      endpoint_env_var: "SEBI_SCORES_API_ENDPOINT"
+      polling_interval_minutes: 15
+      hard_resolution_sla_days: 21
+      statutory_circular: "SEBI/HO/OIAE/IGRD/CIR/P/2023/156"
+      action_taken_report_format: "SEBI_ATR_JSON_V2"
+
+    - name: "IFSCA_SPARK"
+      system_name: "IFSCA Single Portal for Redressal and Knowledge (SPARK)"
+      regulatory_authority: "International Financial Services Centres Authority"
+      protocol: "REST_BEARER"
+      endpoint_env_var: "IFSCA_SPARK_API_ENDPOINT"
+      polling_interval_minutes: 30
+      hard_resolution_sla_days: 30
+      statutory_circular: "IFSCA/2022-23/GEN/003"
+      action_taken_report_format: "IFSCA_ATR_V1"
+
+    - name: "SMART_ODR"
+      system_name: "Securities Market Approach for Resolution Through ODR Portal"
+      regulatory_authority: "SEBI Designated Online Dispute Resolution System"
+      protocol: "REST_MTLS"
+      endpoint_env_var: "SMART_ODR_API_ENDPOINT"
+      auto_escalation_trigger_days: 21
+      statutory_circular: "SEBI/HO/OIAE/OIAE_IAD-1/P/CIR/2023/131"
+      conciliation_sla_days: 21
+      arbitration_sla_days: 30
+
+  state_machine:
+    initial_state: "TICKET_OPEN"
+    states:
+      - name: "TICKET_OPEN"
+        max_duration_hours: 2
+        next_state: "UNDER_INVESTIGATION"
+      - name: "UNDER_INVESTIGATION"
+        max_duration_hours: 48
+        next_states:
+          - "PROPOSED_RESOLUTION"
+          - "ESCALATED_TO_COMPLIANCE"
+      - name: "PROPOSED_RESOLUTION"
+        max_duration_hours: 72
+        next_states:
+          - "INVESTOR_ACCEPTED"
+          - "ESCALATED_TO_COMPLIANCE"
+      - name: "INVESTOR_ACCEPTED"
+        is_terminal: true
+        ledger_status: "RESOLVED"
+      - name: "ESCALATED_TO_COMPLIANCE"
+        max_duration_days: 7
+        next_states:
+          - "COMPLIANCE_RESOLVED"
+          - "EXTERNAL_OMBUDSMAN_SCORES"
+      - name: "COMPLIANCE_RESOLVED"
+        is_terminal: true
+        ledger_status: "RESOLVED"
+      - name: "EXTERNAL_OMBUDSMAN_SCORES"
+        max_duration_days: 21
+        next_states:
+          - "SCORES_DISPOSED"
+          - "SMART_ODR_ARBITRATION"
+      - name: "SCORES_DISPOSED"
+        is_terminal: true
+        ledger_status: "REGULATORY_DISPOSED"
+      - name: "SMART_ODR_ARBITRATION"
+        is_terminal: true
+        ledger_status: "ARBITRATION_AWARDED"
+
+# ------------------------------------------------------------------------------
+# Platform Circuit Breaker & Safety Limit Parameters
+# ------------------------------------------------------------------------------
+circuit_breaker_matrix:
+  market_wide_circuit_breakers:
+    index_monitored: "NIFTY_50"
+    feed_source: "NSE_CO_LOCATION_DIRECT_TICK"
+    tiers:
+      - trigger_level_percent: 10.0
+        time_windows:
+          - window_name: "SESSION_1_BEFORE_13_00_IST"
+            start_time_ist: "09:15"
+            end_time_ist: "13:00"
+            trading_halt_duration_minutes: 45
+            post_halt_auction_minutes: 15
+          - window_name: "SESSION_2_13_00_TO_14_30_IST"
+            start_time_ist: "13:00"
+            end_time_ist: "14:30"
+            trading_halt_duration_minutes: 15
+            post_halt_auction_minutes: 15
+          - window_name: "SESSION_3_AFTER_14_30_IST"
+            start_time_ist: "14:30"
+            end_time_ist: "15:30"
+            trading_halt_duration_minutes: 0
+            post_halt_auction_minutes: 0
+
+      - trigger_level_percent: 15.0
+        time_windows:
+          - window_name: "SESSION_1_BEFORE_13_00_IST"
+            start_time_ist: "09:15"
+            end_time_ist: "13:00"
+            trading_halt_duration_minutes: 105
+            post_halt_auction_minutes: 15
+          - window_name: "SESSION_2_13_00_TO_14_00_IST"
+            start_time_ist: "13:00"
+            end_time_ist: "14:00"
+            trading_halt_duration_minutes: 45
+            post_halt_auction_minutes: 15
+          - window_name: "SESSION_3_AFTER_14_00_IST"
+            start_time_ist: "14:00"
+            end_time_ist: "15:30"
+            trading_halt_duration_minutes: -1
+            post_halt_auction_minutes: 0
+            description: "Trading suspended for remainder of the trading day."
+
+      - trigger_level_percent: 20.0
+        time_windows:
+          - window_name: "SESSION_ANY_TIME"
+            start_time_ist: "09:15"
+            end_time_ist: "15:30"
+            trading_halt_duration_minutes: -1
+            post_halt_auction_minutes: 0
+            description: "Immediate platform-wide trading halt for remainder of the day."
+
+  single_stock_price_collars:
+    default_price_band_percent: 10.0
+    high_volatility_price_band_percent: 5.0
+    sandbox_pilot_price_band_percent: 3.0
+    fat_finger_rejection_collar_percent: 3.0
+    rejection_error_code: "ERR_PRICE_COLLAR_EXCEEDED"
+
+  ledger_anomaly_circuit_breakers:
+    consensus_monitor:
+      max_consecutive_missed_blocks: 5
+      max_block_time_seconds: 5.0
+      action: "EMERGENCY_HALT_NEW_ORDERS"
+    sequencer_wal_lag_ms_threshold: 500
+    proof_of_reserve_discrepancy_threshold_shares: 0
+    onchain_pause_mechanism:
+      contracts:
+        - name: "DigitalSecurityToken.sol"
+          pause_function: "emergencyPause()"
+          unpause_function: "unpause()"
+        - name: "SettlementDvP.sol"
+          pause_function: "emergencyPause()"
+          unpause_function: "unpause()"
+      governance_multisig:
+        threshold: 3
+        total_guardians: 5
+        guardian_roles:
+          - "PRINCIPAL_COMPLIANCE_OFFICER"
+          - "CHIEF_RISK_OFFICER"
+          - "CHIEF_TECHNOLOGY_OFFICER"
+          - "HEAD_OF_INFOSEC"
+          - "LEGAL_COUNSEL"
+
+# ------------------------------------------------------------------------------
+# Negative Balance Protection Rule
+# ------------------------------------------------------------------------------
+negative_balance_protection:
+  policy_name: "STRICT_RETAIL_ZERO_DEFICIT_INVARIANT"
+  enabled: true
+  retail_leverage_limit: 1.0
+  upfront_margin_cash_reservation_ratio: 1.00
+  buffer_margin_overdraft_percent: 0.0
+  rejection_on_insufficient_funds: true
+  error_code: "ERR_NEGATIVE_BALANCE_PROTECTION_TRIGGERED"
+  invariant_rule: "available_unencumbered_inr >= order_notional_inr + statutory_charges_inr"
+
+# ------------------------------------------------------------------------------
+# Investor Protection & Education Fund (IPEF) & Demo Mode Onboarding
+# ------------------------------------------------------------------------------
+investor_protection_fund:
+  fund_name: "Growww Investor Protection and Education Fund Trust"
+  statutory_guideline: "SEBI (Investor Protection and Education Fund) Regulations 2009"
+  escrow_bank_account_type: "SEPARATE_SCHEDULED_COMMERCIAL_BANK_ESCROW"
+  initial_corporate_seed_inr: 50000000.00
+  platform_fine_allocation_percent: 100.0
+  educational_onboarding_mandate:
+    mandatory_demo_mode_trades: 10
+    demo_virtual_starting_balance_inr: 100000.00
+    mandatory_curriculum_modules:
+      - module_id: "MOD_01"
+        title: "Fractional Equities vs Whole Demat Shares"
+        duration_minutes: 8
+      - module_id: "MOD_02"
+        title: "Order Types & Slippage in Volatile Markets"
+        duration_minutes: 10
+      - module_id: "MOD_03"
+        title: "Market Risk, Drawdowns & Portfolio Diversification"
+        duration_minutes: 12
+      - module_id: "MOD_04"
+        title: "Blockchain DvP Settlement & Depository Custody Guarantees"
+        duration_minutes: 10
+    comprehension_quiz:
+      question_count: 5
+      passing_score_percent: 80
+      retake_cooling_minutes: 30

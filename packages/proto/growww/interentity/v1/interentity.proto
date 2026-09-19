@@ -1,0 +1,51 @@
+// Inter-Entity Gateway Protocol (docs/architecture/proto/inter_entity_gateway.proto)
+syntax = "proto3";
+
+package growww.interentity.v1;
+
+option go_package = "growww/interentity/v1;interentityv1";
+
+service InterEntityGateway {
+  // Requests allocation of custody-backed equity units from Domestic Entity
+  rpc RequestCustodyAllocation(CustodyAllocationRequest) returns (CustodyAllocationResponse);
+  
+  // Queries cryptographic Proof-of-Reserve from Domestic Depository Custody
+  rpc VerifyProofOfReserve(ReserveQuery) returns (ReserveAttestation);
+  
+  // Submits settlement batch confirmation across jurisdictional boundaries
+  rpc ConfirmBatchSettlement(BatchSettlementRequest) returns (BatchSettlementResponse);
+}
+
+message CustodyAllocationRequest {
+  string request_id = 1;             // UUID v4 idempotency key
+  string isin = 2;                   // Indian Security ISIN (e.g., INE002A01018)
+  string fractional_units = 3;       // 18-decimal fixed-point string
+  string inr_settlement_amount = 4;  // INR settlement value
+  string omnibus_account_id = 5;     // GIFT City IFSC omnibus account hash
+  bytes gift_city_signature = 6;     // HSM-backed signature from GIFT City entity
+  int64 timestamp = 7;               // Unix timestamp (milliseconds)
+}
+
+message CustodyAllocationResponse {
+  string request_id = 1;
+  string allocation_id = 2;
+  string status = 3;                 // ALLOCATED, REJECTED, PENDING_CUSTODY
+  string on_chain_tx_hash = 4;       // Besu ledger transaction hash
+  bytes domestic_signature = 5;      // HSM-backed signature from Domestic entity
+  int64 timestamp = 6;
+}
+
+message ReserveQuery {
+  string query_id = 1;
+  string isin = 2;
+  int64 as_of_block_number = 3;
+}
+
+message ReserveAttestation {
+  string isin = 4;
+  string total_shares_in_custody = 5;
+  string total_tokens_minted = 6;
+  bytes merkle_root = 7;
+  bytes custodian_signature = 8;
+  int64 timestamp = 9;
+}

@@ -1,0 +1,26 @@
+# Regulatory Compliance Traceability Schema (docs/compliance/traceability_matrix.yaml)
+regulatory_framework:
+  version: "1.0.0"
+  cohort: "FINTECH_SANDBOX_PHASE_1"
+  authorities:
+    sebi:
+      sandbox_program: "SEBI_INNOVATION_SANDBOX"
+      target_license: "STOCK_BROKER_DEPOSITORY_PARTICIPANT"
+      constraints:
+        max_domestic_users: 10000
+        max_portfolio_inr_per_user: 50000.00
+        max_aggregate_volume_inr: 500000000.00
+        settlement_cycle: "T_PLUS_ZERO_DVP"
+    rbi:
+      sandbox_program: "RBI_INNOVATION_HUB"
+      target_license: "PAYMENT_AGGREGATOR_ESCROW"
+      constraints:
+        settlement_rails: ["UPI", "IMPS", "NEFT", "RTGS"]
+        unregulated_stablecoins_prohibited: true
+    ifsca:
+      sandbox_program: "IFSCA_FINTECH_SANDBOX"
+      target_license: "CAPITAL_MARKET_INTERMEDIARY"
+      constraints:
+        max_foreign_users: 5000
+        max_portfolio_usd_per_user: 10000.00
+        sanctions_screening_mandatory: true

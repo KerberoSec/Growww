@@ -1,0 +1,193 @@
+# Master SLO & Performance Specification (docs/architecture/slo_targets.yaml)
+# Version: 1.0.0-PROD
+# Platform: Growww / National Blockchain Stock Exchange (NBSE)
+# Governance: Site Reliability Engineering, High-Frequency Trading Core, Distributed Ledger Infrastructure
+# Regulatory Alignment: SEBI CSCRF, RBI Cyber Security Framework, DPDP Act 2023
+
+performance_specification:
+  version: "1.0.0"
+  market_hours_uptime_sla_percent: 99.99
+  general_uptime_sla_percent: 99.90
+  disaster_recovery:
+    rto_minutes: 15
+    rpo_seconds_database: 1
+    rpo_seconds_ledger: 0
+
+  latency_budgets_ms:
+    order_matching_engine:
+      p50: 1.0
+      p95: 2.5
+      p99: 5.0
+    api_gateway_bff:
+      p50: 15.0
+      p95: 35.0
+      p99: 50.0
+    settlement_engine_dvp:
+      p50: 500.0
+      p95: 1500.0
+      p99: 2000.0
+    client_flutter_cold_start:
+      p99: 1500.0
+
+  throughput_targets_rps:
+    order_submission_burst: 10000
+    order_matching_sustained: 2500
+    besu_ledger_dvp_settlement: 1500
+    websocket_active_connections: 1000000
+
+  storage_durability:
+    audit_log_retention_years: 7
+    database_backup_frequency_hours: 1
+    point_in_time_recovery_days: 35
+
+# Extended Operational Subsystem SLOs & Performance Matrices
+microservice_slos:
+  order_service:
+    protocol: "grpc"
+    latency_ms:
+      p50: 5.0
+      p95: 15.0
+      p99: 25.0
+      p99_9: 40.0
+    availability_sla_percent: 99.99
+    timeout_ms: 100
+    circuit_breaker:
+      failure_rate_threshold_percent: 50
+      slow_call_rate_threshold_percent: 60
+      slow_call_duration_threshold_ms: 50
+      wait_duration_in_open_state_ms: 5000
+      permitted_calls_in_half_open_state: 20
+
+  pre_trade_risk_engine:
+    protocol: "in_memory_ipc"
+    latency_ms:
+      p50: 0.2
+      p95: 0.8
+      p99: 1.5
+      p99_9: 3.0
+    availability_sla_percent: 99.999
+    timeout_ms: 10
+    circuit_breaker:
+      failure_rate_threshold_percent: 25
+      wait_duration_in_open_state_ms: 1000
+
+  matching_engine_core:
+    protocol: "lock_free_spsc_ring"
+    latency_ms:
+      p50: 0.010
+      p95: 0.050
+      p99: 0.100
+      p99_9: 0.500
+    availability_sla_percent: 99.999
+    timeout_ms: 5
+
+  user_and_auth_service:
+    protocol: "grpc"
+    latency_ms:
+      p50: 10.0
+      p95: 25.0
+      p99: 50.0
+      p99_9: 80.0
+    availability_sla_percent: 99.95
+    timeout_ms: 200
+
+  market_data_gateway:
+    protocol: "websocket_binary"
+    conflation_window_ms: 100
+    latency_ms:
+      p50: 5.0
+      p95: 20.0
+      p99: 50.0
+      p99_9: 100.0
+    availability_sla_percent: 99.99
+    timeout_ms: 150
+
+  settlement_and_clearing_engine:
+    protocol: "grpc_and_evm_rpc"
+    latency_ms:
+      p50: 250.0
+      p95: 1000.0
+      p99: 1800.0
+      p99_9: 2500.0
+    availability_sla_percent: 99.99
+    timeout_ms: 5000
+
+  depository_and_banking_gateway:
+    protocol: "iso20022_and_rest"
+    latency_ms:
+      p50: 200.0
+      p95: 800.0
+      p99: 1500.0
+      p99_9: 3000.0
+    availability_sla_percent: 99.90
+    timeout_ms: 10000
+
+client_performance_slos:
+  flutter_mobile:
+    frame_rate_fps_low_end: 60
+    frame_rate_fps_high_refresh: 120
+    max_frame_time_ms_60fps: 16.6
+    max_frame_time_ms_120fps: 8.33
+    cold_start_time_p99_ms: 1500.0
+    warm_start_time_p99_ms: 500.0
+    hot_resume_time_p99_ms: 200.0
+    apk_payload_size_mb: 35.0
+    baseline_ram_usage_mb: 150.0
+    peak_ram_usage_mb: 300.0
+    background_cpu_utilization_max_percent: 10.0
+
+  web_pro_trading_terminal:
+    initial_wasm_bundle_size_mb: 5.0
+    time_to_interactive_p99_ms: 1000.0
+    l2_depth_render_frame_rate_fps: 60
+
+  desktop_native_client:
+    frame_rate_fps: 120
+    max_memory_footprint_mb: 250.0
+    multi_window_docking_jank_percent: 0.0
+
+blockchain_invariants_besu_qbft:
+  consensus_protocol: "QBFT"
+  block_time_seconds: 2.0
+  deterministic_finality_blocks: 1
+  probabilistic_fork_tolerance: 0
+  active_validators_count: 4
+  byzantine_fault_tolerance_f: 1
+  min_quorum_validators: 3
+  settlement_throughput_tps_min: 1500
+  storage_engine: "Bonsai_Trie_RocksDB"
+  max_hot_working_state_gb: 450
+  rolling_trie_pruning_depth_blocks: 2048
+  account_abstraction_relayers_shards: 32
+  gas_sponsorship_mode: "100_percent_paymaster"
+  zero_pii_onchain: true
+  compact_hash_payload_bytes: 32
+
+security_and_cryptography_slos:
+  hsm_signing_latency_max_ms: 10.0
+  field_level_encryption_overhead_max_ms: 2.0
+  spiffe_spire_mtls_overhead_max_ms: 1.0
+  p1_incident_escalation_sla_seconds: 60
+  unannounced_dr_drill_cadence_months: 6
+  telemetry_reporting: "24x7x365_soc_ciso"
+
+alerting_error_budget_burn_rules:
+  tier_1_critical_page:
+    burn_rate_1h: 14.4
+    budget_consumed_percent_1h: 2.0
+    burn_rate_6h: 6.0
+    budget_consumed_percent_6h: 5.0
+    notification_channel: "pagerduty_p1_call"
+    escalation_window_seconds: 60
+
+  tier_2_warning_ticket:
+    burn_rate_3d: 3.0
+    budget_consumed_percent_3d: 10.0
+    burn_rate_14d: 1.0
+    budget_consumed_percent_14d: 50.0
+    notification_channel: "slack_sre_war_room_and_jira"
+
+deployment_gates:
+  budget_remaining_threshold_freeze_percent: 10.0
+  budget_remaining_threshold_throttle_percent: 20.0
+  automated_ci_block_on_slo_failure: true

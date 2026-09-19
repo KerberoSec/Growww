@@ -1,0 +1,31 @@
+# Invariant Validation Schema (docs/architecture/schema/invariants.yaml)
+system_invariants:
+  version: "1.0.0"
+  asset_backing:
+    type: "1:1_physical_custody"
+    depository: "NSDL_CDSL"
+    synthetic_allowed: false
+  fiat_rails:
+    domestic: ["UPI", "IMPS", "NEFT", "RTGS"]
+    unregulated_stablecoins_allowed: false
+  ledger:
+    type: "permissioned_consortium"
+    node_engine: "Hyperledger_Besu"
+    consensus: "QBFT"
+    block_time_seconds: 2
+    on_chain_pii_allowed: false
+  monetization:
+    fee_type: "fixed_transaction_turnover"
+    platform_fee_rate: 0.0000 # 0.00% Zero Fee at launch (FeeController governed) # 0.00% (Zero Fee) (0 bps (0.00% fee at launch)) on trade notional turnover
+    revenue_split:
+      governance: "FeeController.sol"
+      timelock_hours: 48
+      max_fee_ceiling_bps: 50
+      maker_fee_bps: 0 # 0.00% Zero-Fee at launch
+      taker_fee_bps: 0 # 0.00% Zero-Fee at launch
+    tax_compliance_engine: "FIFO_capital_gains_Section_111A_112A"
+    holding_fee_rate: 0.0
+    aum_fee_rate: 0.0
+  security:
+    key_custody: "FIPS_140_2_L3_HSM"
+    inter_service_auth: "mTLS_SPIFFE_SPIRE"
