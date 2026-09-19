@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message MultichainDepositAddress {
+  string chain_id = 1; // "ETH", "TRX", "POL", "SOL"
+  string deposit_address = 2;
+  int32 min_confirmations = 3;
+}
+
+service MultichainDepositService {
+  rpc GetDepositAddress(MultichainDepositAddress) returns (MultichainDepositAddress);
+}
