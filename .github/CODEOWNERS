@@ -1,0 +1,5 @@
+# Core Team Reviewers
+/services/wallet-service/      @growww/ledger-team @growww/security
+/services/matching-engine/     @growww/trading-core
+/contracts/                    @growww/blockchain @growww/security
+/infra/terraform/              @growww/platform-sre
