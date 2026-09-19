@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message FiatDepositIntent {
+  string user_id = 1;
+  double amount_inr = 2;
+  string payment_rail = 3; // "UPI_INTENT", "UPI_QR", "IMPS"
+  string transaction_ref = 4;
+}
+
+service FiatDepositGatewayService {
+  rpc CreateDepositIntent(FiatDepositIntent) returns (FiatDepositIntent);
+}
