@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message WindowSyncEvent {
+  string window_id = 1;
+  string channel_name = 2;
+  string active_ticker = 3;
+  uint64 broadcast_timestamp_ms = 4;
+}
+
+service DetachedWindowManagerService {
+  rpc SyncWindowState(WindowSyncEvent) returns (WindowSyncEvent);
+}
