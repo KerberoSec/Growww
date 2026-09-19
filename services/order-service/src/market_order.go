@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
 )
 
@@ -53,8 +54,9 @@ func ExecuteMarketOrder(req MarketOrderRequest, availableDepth []BookLevel) (*Ma
 	}
 
 	remaining := req.QuantityE8
-	var totalCost uint64
 	var filledQty uint64
+	var totalCostBig big.Int
+	e8Big := big.NewInt(1e8)
 
 	for _, level := range availableDepth {
 		if remaining == 0 {
@@ -66,7 +68,12 @@ func ExecuteMarketOrder(req MarketOrderRequest, availableDepth []BookLevel) (*Ma
 			qtyToTake = remaining
 		}
 
-		totalCost += (qtyToTake * level.PriceE8) / 1e8
+		// Use big.Int to prevent uint64 overflow on qty * price
+		var levelCost big.Int
+		levelCost.Mul(new(big.Int).SetUint64(qtyToTake), new(big.Int).SetUint64(level.PriceE8))
+		levelCost.Div(&levelCost, e8Big)
+		totalCostBig.Add(&totalCostBig, &levelCost)
+
 		filledQty += qtyToTake
 		remaining -= qtyToTake
 	}
@@ -75,7 +82,12 @@ func ExecuteMarketOrder(req MarketOrderRequest, availableDepth []BookLevel) (*Ma
 		return nil, errors.New("zero volume matched")
 	}
 
-	avgPrice := (totalCost * 1e8) / filledQty
+	// avgPrice = (totalCost * 1e8) / filledQty using big.Int
+	var avgPriceBig big.Int
+	avgPriceBig.Mul(&totalCostBig, e8Big)
+	avgPriceBig.Div(&avgPriceBig, new(big.Int).SetUint64(filledQty))
+	avgPrice := avgPriceBig.Uint64()
+	totalCost := totalCostBig.Uint64()
 
 	// Slippage calculation against pre-trade estimated price
 	var slippageBps uint32

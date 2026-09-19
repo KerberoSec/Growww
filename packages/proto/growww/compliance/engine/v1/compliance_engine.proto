@@ -1,0 +1,195 @@
+syntax = "proto3";
+
+package growww.compliance.engine.v1;
+
+option go_package = "growww/packages/proto/growww/compliance/engine/v1;enginev1";
+
+// KYC Verification Tiers
+enum KYCTier {
+  KYC_TIER_UNSPECIFIED = 0;
+  KYC_TIER_0_UNVERIFIED = 1;
+  KYC_TIER_1_BASIC_OTP = 2;
+  KYC_TIER_2_FULL_CKYC = 3;
+  KYC_TIER_3_INSTITUTIONAL_VCIP = 4;
+}
+
+// AML Risk Tiers
+enum AMLRiskTier {
+  AML_RISK_UNSPECIFIED = 0;
+  AML_RISK_LOW = 1;
+  AML_RISK_MEDIUM = 2;
+  AML_RISK_HIGH = 3;
+}
+
+// Politically Exposed Person Classification
+enum PEPClassification {
+  PEP_NONE = 0;
+  PEP_DOMESTIC = 1;
+  PEP_FOREIGN = 2;
+  PEP_CLOSE_ASSOCIATE = 3;
+}
+
+// Sanctions Screening Status
+enum SanctionsStatus {
+  SANCTIONS_CLEAR = 0;
+  SANCTIONS_FLAGGED = 1;
+  SANCTIONS_FALSE_POSITIVE_RESOLVED = 2;
+}
+
+// Jurisdiction Types
+enum Jurisdiction {
+  JURISDICTION_UNSPECIFIED = 0;
+  JURISDICTION_DOMESTIC_SEBI_RBI = 1;
+  JURISDICTION_IFSCA_GIFT_CITY = 2;
+}
+
+// Request to verify domestic Indian investor KYC
+message VerifyDomesticKYCRequest {
+  string request_id = 1;
+  string investor_uuid = 2;
+  string pan_number = 3;
+  string aadhaar_masked = 4;             // Must be 8-digit masked: XXXX-XXXX-1234 or ********1234
+  string aadhaar_vault_token = 5;
+  string ckyc_number = 6;                // Optional 14-digit CKYCR number
+  string bank_account_vault_token = 7;
+  string bank_ifsc = 8;
+  string bank_beneficiary_name = 9;
+  string kyc_declared_name = 10;
+  double face_liveness_score = 11;       // ISO/IEC 30107-3 PAD score (0.0 to 1.0)
+  bool face_anti_spoof_passed = 12;
+  double annual_income_inr = 13;
+  string occupation = 14;
+}
+
+message VerifyDomesticKYCResponse {
+  string request_id = 1;
+  bool is_approved = 2;
+  KYCTier assigned_tier = 3;
+  AMLRiskTier risk_tier = 4;
+  double penny_drop_name_match_score = 5;
+  bool pan_verified = 6;
+  bool aadhaar_masking_compliant = 7;
+  string identity_commitment_hash = 8;   // 32-byte hex hash for on-chain ComplianceRegistry.sol
+  int64 re_kyc_due_timestamp = 9;
+  string rejection_reason = 10;
+}
+
+// Request to verify international investor (GIFT City IFSCA)
+message VerifyForeignKYCRequest {
+  string request_id = 1;
+  string foreign_investor_uuid = 2;
+  string nationality_iso3 = 3;           // e.g. USA, GBR, SGP
+  string passport_number_hash = 4;
+  string passport_mrz_line1 = 5;
+  string passport_mrz_line2 = 6;
+  string passport_expiry_date = 7;       // YYYY-MM-DD
+  double biometric_liveness_score = 8;
+  bool anti_spoof_passed = 9;
+  string proof_of_address_vault_token = 10;
+  string tax_residency_country_iso3 = 11;
+  string tin_vault_token = 12;
+  bool is_us_person = 13;
+  string fatca_status = 14;              // COMPLIANT_W8BEN, COMPLIANT_W9, EXEMPT
+}
+
+message VerifyForeignKYCResponse {
+  string request_id = 1;
+  bool is_approved = 2;
+  bool fatf_blacklist_cleared = 3;
+  bool passport_mrz_valid = 4;
+  string foreign_commitment_hash = 5;
+  string jurisdiction_flag = 6;          // "JURISDICTION_IFSCA"
+  string rejection_reason = 7;
+}
+
+// Request to screen against PEP & Sanctions
+message ScreenSanctionsPEPRequest {
+  string request_id = 1;
+  string investor_uuid = 2;
+  string full_name = 3;
+  string country_iso3 = 4;
+  string pan_or_tax_id = 5;
+}
+
+message ScreenSanctionsPEPResponse {
+  string request_id = 1;
+  SanctionsStatus sanctions_status = 2;
+  string matched_sanctions_list = 3;    // e.g., OFAC_SDN, UN_CONSOLIDATED, MHA_UAPA
+  PEPClassification pep_status = 4;
+  bool edd_required = 5;
+  bool account_frozen = 6;
+  string remarks = 7;
+}
+
+// Request to screen transaction for AML (structuring & CTR)
+message ScreenTransactionAMLRequest {
+  string request_id = 1;
+  string user_id = 2;
+  double transaction_amount_inr = 3;
+  repeated double recent_transaction_amounts_inr = 4;
+  bool is_crypto_transfer = 5;
+  string crypto_currency = 6;            // BTC, USDT
+  double crypto_amount_fiat_inr = 7;
+  TravelRuleMetadata travel_rule_data = 8;
+}
+
+message TravelRuleMetadata {
+  string transfer_id = 1;
+  string originator_name = 2;
+  string originator_account_id = 3;
+  string originator_national_id = 4;
+  string beneficiary_name = 5;
+  string beneficiary_wallet_address = 6;
+  string originator_vasp = 7;
+  string beneficiary_vasp = 8;
+}
+
+message ScreenTransactionAMLResponse {
+  string request_id = 1;
+  bool is_allowed = 2;
+  bool str_triggered = 3;
+  bool ctr_triggered = 4;
+  bool travel_rule_compliant = 5;
+  string str_report_reference = 6;
+  string error_message = 7;
+}
+
+// Request to check KYC tier limits
+message CheckTierLimitRequest {
+  string user_id = 1;
+  KYCTier current_tier = 2;
+  double requested_withdrawal_amount_inr = 3;
+  double aggregated_daily_withdrawn_inr = 4;
+  double aggregated_annual_withdrawn_inr = 5;
+}
+
+message CheckTierLimitResponse {
+  bool limit_exceeded = 1;
+  double remaining_daily_inr = 2;
+  double remaining_annual_inr = 3;
+  string rejection_reason = 4;
+}
+
+// Request to validate sandbox participant bounds
+message ValidateSandboxBoundsRequest {
+  string user_id = 1;
+  Jurisdiction jurisdiction = 2;
+  uint32 current_enrolled_users = 3;
+  double requested_portfolio_fiat = 4;
+  double total_aggregate_volume_fiat = 5;
+}
+
+message ValidateSandboxBoundsResponse {
+  bool is_within_bounds = 1;
+  string constraint_violated = 2;
+}
+
+// Service definition
+service ComplianceEngineService {
+  rpc VerifyDomesticKYC(VerifyDomesticKYCRequest) returns (VerifyDomesticKYCResponse);
+  rpc VerifyForeignKYC(VerifyForeignKYCRequest) returns (VerifyForeignKYCResponse);
+  rpc ScreenSanctionsPEP(ScreenSanctionsPEPRequest) returns (ScreenSanctionsPEPResponse);
+  rpc ScreenTransactionAML(ScreenTransactionAMLRequest) returns (ScreenTransactionAMLResponse);
+  rpc CheckTierLimit(CheckTierLimitRequest) returns (CheckTierLimitResponse);
+  rpc ValidateSandboxBounds(ValidateSandboxBoundsRequest) returns (ValidateSandboxBoundsResponse);
+}

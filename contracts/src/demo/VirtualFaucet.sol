@@ -34,7 +34,7 @@ contract VirtualFaucet {
      */
     function claimDemoFunds() external returns (bool) {
         require(
-            block.timestamp >= lastDripTimestamp[msg.sender] + COOLDOWN_PERIOD,
+            lastDripTimestamp[msg.sender] == 0 || block.timestamp >= lastDripTimestamp[msg.sender] + COOLDOWN_PERIOD,
             "Cooldown: Wait 24 hours between claims"
         );
 
@@ -62,6 +62,9 @@ contract VirtualFaucet {
     }
 
     function canClaim(address user) external view returns (bool, uint256 timeRemaining) {
+        if (lastDripTimestamp[user] == 0) {
+            return (true, 0);
+        }
         uint256 nextEligible = lastDripTimestamp[user] + COOLDOWN_PERIOD;
         if (block.timestamp >= nextEligible) {
             return (true, 0);

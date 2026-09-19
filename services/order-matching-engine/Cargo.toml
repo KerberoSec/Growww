@@ -1,0 +1,16 @@
+[package]
+name = "order-matching-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Growww Sovereign Exchange Architecture Team"]
+description = "Institutional-grade Level 2/Level 3 low-latency order matching engine with FIFO & Pro-Rata matching, STP, and snapshot/delta synchronization"
+
+[dependencies]
+
+[[bench]]
+name = "matching_benchmark"
+harness = false
+
+[lib]
+name = "order_matching_engine"
+path = "src/lib.rs"
