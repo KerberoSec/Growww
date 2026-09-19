@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message DepthLadderSnapshot {
+  string symbol = 1;
+  uint64 sequence = 2;
+  repeated double bid_prices = 3;
+  repeated double bid_sizes = 4;
+  repeated double ask_prices = 5;
+  repeated double ask_sizes = 6;
+}
+
+service DepthLadderService {
+  rpc GetSnapshot(DepthLadderSnapshot) returns (DepthLadderSnapshot);
+}
