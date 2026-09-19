@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  cdk-validator1:
+    image: 0xpolygon/polygon-edge:0.7.1
+    container_name: cdk-validator1
+    command:
+      - server
+      - --data-dir=/data
+      - --chain=/genesis.json
+      - --grpc-address=0.0.0.0:9632
+      - --jsonrpc=0.0.0.0:8545
+      - --libp2p=0.0.0.0:1478
+      - --prometheus=0.0.0.0:5001
+      - --seal
+    volumes:
+      - ./genesis.json:/genesis.json:ro
+      - cdk-validator1-data:/data
+    ports:
+      - "8547:8545"
+      - "5001:5001"
+    networks:
+      - cdk-net
+
+volumes:
+  cdk-validator1-data:
+
+networks:
+  cdk-net:
+    driver: bridge

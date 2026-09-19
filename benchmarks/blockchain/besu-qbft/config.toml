@@ -1,0 +1,34 @@
+# Hyperledger Besu QBFT Benchmark Node Configuration
+genesis-file = "/opt/besu/genesis.json"
+data-path = "/opt/besu/data"
+
+# Networking & Discovery
+p2p-enabled = true
+p2p-port = 30303
+discovery-enabled = true
+max-peers = 25
+
+# RPC API Configuration
+rpc-http-enabled = true
+rpc-http-host = "0.0.0.0"
+rpc-http-port = 8545
+rpc-http-api = ["ETH", "NET", "QBFT", "PERM", "WEB3"]
+rpc-http-cors-origins = ["*"]
+rpc-ws-enabled = true
+rpc-ws-host = "0.0.0.0"
+rpc-ws-port = 8546
+rpc-ws-api = ["ETH", "NET", "QBFT", "PERM", "WEB3"]
+
+# Metrics & Observability
+metrics-enabled = true
+metrics-host = "0.0.0.0"
+metrics-port = 9545
+
+# Performance Tuning for >2000 TPS Benchmark
+tx-pool = "layered"
+tx-pool-max-size = 20000
+tx-pool-retention-hours = 1
+min-gas-price = 0
+data-storage-format = "BONSAI"
+sync-mode = "FULL"
+logging = "INFO"

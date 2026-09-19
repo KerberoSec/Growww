@@ -1,0 +1,34 @@
+{
+  "name": "polygon-cdk-benchmark",
+  "chainId": 1338,
+  "consensus": {
+    "type": "ibft",
+    "validators": [
+      "0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73",
+      "0x627306090abaB3A6e1400e9345bC60c78a8BEf57",
+      "0xf17f52151EbEF6C7334FAD080c5704D77216b732",
+      "0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef"
+    ],
+    "epochSize": 100000,
+    "blockTime": "2s"
+  },
+  "params": {
+    "forks": {
+      "homestead": 0,
+      "byzantium": 0,
+      "constantinople": 0,
+      "petersburg": 0,
+      "istanbul": 0,
+      "berlin": 0,
+      "london": 0
+    },
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "gasLimit": 30000000,
+    "maxContractSize": 24576
+  },
+  "alloc": {
+    "0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73": {
+      "balance": "0x1000000000000000000000000000"
+    }
+  }
+}

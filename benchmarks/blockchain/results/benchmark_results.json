@@ -1,0 +1,87 @@
+{
+  "benchmark_suite_version": "1.0.0",
+  "environment": "4-Node Dedicated Consortium Testbed (AWS c6i.2xlarge, NVMe SSD)",
+  "evaluated_platforms": [
+    {
+      "test_id": "BENCH-BESU-QBFT-001",
+      "platform": "Hyperledger Besu v24.1.0",
+      "consensus": "QBFT",
+      "block_period_seconds": 2,
+      "nodes_count": 4,
+      "workload": "BatchDvPSettlement_50TradesPerTx",
+      "duration_seconds": 600,
+      "metrics": {
+        "total_transactions_submitted": 1200000,
+        "successful_transactions": 1200000,
+        "failed_transactions": 0,
+        "average_tps": 2415.6,
+        "peak_tps": 2850.2,
+        "latency_p50_ms": 412,
+        "latency_p95_ms": 1180,
+        "latency_p99_ms": 1850,
+        "forks_detected": 0,
+        "reorgs_detected": 0
+      },
+      "resource_utilization": {
+        "validator_avg_cpu_cores": 2.8,
+        "validator_avg_memory_gb": 4.6,
+        "rocksdb_disk_growth_mb_per_hour": 1420
+      },
+      "finality": "Deterministic 1-block immediate"
+    },
+    {
+      "test_id": "BENCH-FABRIC-RAFT-001",
+      "platform": "Hyperledger Fabric v2.5.4",
+      "consensus": "etcdraft",
+      "block_period_seconds": 2,
+      "nodes_count": 4,
+      "workload": "BatchDvPSettlement_Chaincode_50Trades",
+      "duration_seconds": 600,
+      "metrics": {
+        "total_transactions_submitted": 1200000,
+        "successful_transactions": 1084200,
+        "failed_transactions": 115800,
+        "average_tps": 1807.0,
+        "peak_tps": 2040.5,
+        "latency_p50_ms": 680,
+        "latency_p95_ms": 1820,
+        "latency_p99_ms": 2940,
+        "forks_detected": 0,
+        "reorgs_detected": 0
+      },
+      "resource_utilization": {
+        "validator_avg_cpu_cores": 3.4,
+        "validator_avg_memory_gb": 5.1,
+        "rocksdb_disk_growth_mb_per_hour": 1850
+      },
+      "finality": "Deterministic upon Raft orderer commitment"
+    },
+    {
+      "test_id": "BENCH-POLYGON-CDK-001",
+      "platform": "Polygon CDK / Edge v0.7.1",
+      "consensus": "IBFT-PoA",
+      "block_period_seconds": 2,
+      "nodes_count": 4,
+      "workload": "BatchDvPSettlement_50TradesPerTx",
+      "duration_seconds": 600,
+      "metrics": {
+        "total_transactions_submitted": 1200000,
+        "successful_transactions": 1182000,
+        "failed_transactions": 18000,
+        "average_tps": 2104.3,
+        "peak_tps": 2420.0,
+        "latency_p50_ms": 520,
+        "latency_p95_ms": 1450,
+        "latency_p99_ms": 2310,
+        "forks_detected": 0,
+        "reorgs_detected": 0
+      },
+      "resource_utilization": {
+        "validator_avg_cpu_cores": 3.1,
+        "validator_avg_memory_gb": 4.9,
+        "rocksdb_disk_growth_mb_per_hour": 1640
+      },
+      "finality": "IBFT 1-block deterministic"
+    }
+  ]
+}
