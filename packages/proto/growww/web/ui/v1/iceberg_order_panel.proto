@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message IcebergOrderConfig {
+  double total_quantity = 1;
+  double display_quantity = 2;
+  double variance_pct = 3;
+}
+
+service IcebergOrderService {
+  rpc SliceIceberg(IcebergOrderConfig) returns (IcebergOrderConfig);
+}
