@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message SectorAllocationNode {
+  string sector_name = 1;
+  double weight_pct = 2;
+  double value_inr = 3;
+}
+
+service HoldingsTreemapService {
+  rpc GetSectorBreakdown(SectorAllocationNode) returns (SectorAllocationNode);
+}
