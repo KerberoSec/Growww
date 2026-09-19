@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message DailyPnLRecord {
+  string date = 1; // "YYYY-MM-DD"
+  double realized_pnl_inr = 2;
+  double net_trades_count = 3;
+}
+
+service PnLCalendarReportsService {
+  rpc GetMonthlyPnLCalendar(DailyPnLRecord) returns (DailyPnLRecord);
+}
