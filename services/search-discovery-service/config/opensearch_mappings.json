@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "ticker_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "edge_ngram_filter"]
+        }
+      },
+      "filter": {
+        "edge_ngram_filter": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 10
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "symbol": { "type": "text", "analyzer": "ticker_analyzer" },
+      "name": { "type": "text" },
+      "isin": { "type": "keyword" },
+      "asset_type": { "type": "keyword" },
+      "tags": { "type": "keyword" }
+    }
+  }
+}
