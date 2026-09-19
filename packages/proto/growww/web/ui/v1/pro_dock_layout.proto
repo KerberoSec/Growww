@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message DockLayoutConfig {
+  string layout_id = 1;
+  string user_id = 2;
+  repeated string visible_panels = 3;
+  string serialized_grid_state = 4;
+}
+
+service ProDockLayoutService {
+  rpc SaveLayout(DockLayoutConfig) returns (DockLayoutConfig);
+}
