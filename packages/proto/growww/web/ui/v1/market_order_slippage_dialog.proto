@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message SlippageWarningRequest {
+  string symbol = 1;
+  double order_quantity = 2;
+  double estimated_slippage_pct = 3;
+  double max_slippage_threshold = 4;
+}
+
+service SlippageWarningService {
+  rpc EvaluateSlippageRisk(SlippageWarningRequest) returns (SlippageWarningRequest);
+}
