@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message ArbitrationDecision {
+  string dispute_id = 1;
+  string operator_id = 2;
+  string verdict = 3; // "RELEASE_ESCROW", "REFUND_MAKER"
+  string justification = 4;
+}
+
+service P2PArbitrationService {
+  rpc ExecuteArbitration(ArbitrationDecision) returns (ArbitrationDecision);
+}
