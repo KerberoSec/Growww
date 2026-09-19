@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package growww.notification.v1;
+
+option go_package = "growww/notification/v1;notificationv1";
+
+service NotificationService {
+  rpc SendDirectNotification (SendDirectNotificationRequest) returns (SendDirectNotificationResponse);
+  rpc GetUserPreferences (GetUserPreferencesRequest) returns (GetUserPreferencesResponse);
+  rpc UpdateUserPreferences (UpdateUserPreferencesRequest) returns (UpdateUserPreferencesResponse);
+}
+
+enum ChannelType {
+  CHANNEL_TYPE_UNSPECIFIED = 0;
+  CHANNEL_TYPE_PUSH = 1;
+  CHANNEL_TYPE_SMS = 2;
+  CHANNEL_TYPE_EMAIL = 3;
+  CHANNEL_TYPE_IN_APP = 4;
+}
+
+enum NotificationPriority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1; // Market updates
+  PRIORITY_MEDIUM = 2; // Order updates
+  PRIORITY_HIGH = 3; // Trade settlement, funds deposit
+  PRIORITY_CRITICAL = 4; // OTP, security alerts
+}
+
+message SendDirectNotificationRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  ChannelType channel = 3;
+  NotificationPriority priority = 4;
+  string template_id = 5; // e.g. "AUTH_OTP_LOGIN_V1"
+  map<string, string> template_variables = 6;
+  string recipient_override = 7; // Optional direct phone/email for pre-registered users
+}
+
+message SendDirectNotificationResponse {
+  string notification_id = 1;
+  bool queued = 2;
+  string status = 3; // "SENT", "QUEUED", "SUPPRESSED"
+}
+
+message GetUserPreferencesRequest {
+  string user_id = 1;
+}
+
+message GetUserPreferencesResponse {
+  string user_id = 1;
+  bool allow_push = 2;
+  bool allow_sms = 3;
+  bool allow_email = 4;
+  bool allow_market_alerts = 5;
+}
+
+message UpdateUserPreferencesRequest {
+  string user_id = 1;
+  bool allow_push = 2;
+  bool allow_sms = 3;
+  bool allow_email = 4;
+  bool allow_market_alerts = 5;
+}
+
+message UpdateUserPreferencesResponse {
+  bool success = 1;
+}

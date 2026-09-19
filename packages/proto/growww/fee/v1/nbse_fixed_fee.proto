@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package growww.fee.v1;
+
+option go_package = "growww/fee/v1;feev1";
+
+service FeeEngineService {
+  rpc EstimateTransactionFee (EstimateFeeRequest) returns (EstimateFeeResponse);
+  rpc CalculateTradeFee (CalculateTradeFeeRequest) returns (CalculateTradeFeeResponse);
+  rpc ProcessSettlementFee (ProcessSettlementFeeRequest) returns (ProcessSettlementFeeResponse);
+  rpc GetRevenueDistributionSummary (RevenueSummaryRequest) returns (RevenueSummaryResponse);
+}
+
+enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0;
+  OPERATION_TYPE_SPOT_TRADE = 1;
+  OPERATION_TYPE_PERPETUAL_TRADE = 2;
+  OPERATION_TYPE_OPTION_EXERCISE = 3;
+  OPERATION_TYPE_COMMODITY_DELIVERY = 4;
+  OPERATION_TYPE_CROSS_CHAIN_TRANSFER = 5;
+}
+
+enum AssetCategory {
+  ASSET_CATEGORY_UNSPECIFIED = 0;
+  ASSET_CATEGORY_EQUITY_DELIVERY = 1;
+  ASSET_CATEGORY_EQUITY_INTRADAY = 2;
+  ASSET_CATEGORY_DERIVATIVE_FUTURE = 3;
+  ASSET_CATEGORY_DERIVATIVE_OPTION = 4;
+  ASSET_CATEGORY_DEBT_SECURITY = 5;
+  ASSET_CATEGORY_COMMODITY_METALS = 6;
+  ASSET_CATEGORY_COMMODITY_AGRI = 7;
+  ASSET_CATEGORY_CRYPTO_TOKEN = 8;
+}
+
+message EstimateFeeRequest {
+  OperationType operation_type = 1;
+  AssetCategory asset_category = 2;
+  string asset_symbol = 3;
+  string currency = 4; // INR, USD, EUR, AED, BTC, ETH, USDT, USDC
+  string unit_price = 5; // Fixed-point decimal string
+  string quantity = 6; // Fixed-point decimal string
+  string trade_side = 7; // BUY, SELL, EXERCISE, DELIVER, BRIDGE
+  string user_state_code = 8; // Indian state code for GST (e.g., "MH", "KA", "DL")
+}
+
+message StatutoryLevies {
+  string stt_inr = 1;
+  string gst_cgst_inr = 2;
+  string gst_sgst_inr = 3;
+  string gst_igst_inr = 4;
+  string total_gst_inr = 5;
+  string stamp_duty_inr = 6;
+  string sebi_turnover_fee_inr = 7;
+  string total_statutory_levies_inr = 8;
+}
+
+message RevenueDistribution {
+  string treasury_allocation_inr = 1; // Governed by FeeController (0.00% at launch)
+  string cgf_allocation_inr = 2; // Governed by FeeController (0.00% at launch)
+  string ipf_allocation_inr = 3; // Governed by FeeController (0.00% at launch)
+  string rounding_remainder_inr = 4; // Credited to CGF
+}
+
+message EstimateFeeResponse {
+  string notional_value_inr = 1;
+  string notional_value_settlement_currency = 2;
+  string fx_rate_used = 3;
+  string nbse_fee_bps = 4; // "0.0000" (0.00% Zero-Fee at launch)
+  string nbse_fee_inr = 5; // Fixed-point at 10^-4 INR precision
+  string nbse_fee_settlement_currency = 6;
+  StatutoryLevies statutory_levies = 7;
+  RevenueDistribution revenue_distribution = 8;
+  string total_user_deduction_inr = 9;
+  string total_user_deduction_settlement_currency = 10;
+  int64 calculated_at_unix_ns = 11;
+}
+
+message CalculateTradeFeeRequest {
+  string trade_id = 1;
+  string execution_id = 2;
+  string buyer_user_id = 3;
+  string seller_user_id = 4;
+  OperationType operation_type = 5;
+  AssetCategory asset_category = 6;
+  string isin = 7;
+  string symbol = 8;
+  string price = 9;
+  string quantity = 10;
+  string settlement_currency = 11;
+  string buyer_state_code = 12;
+  string seller_state_code = 13;
+}
+
+message ParticipantFeeBreakdown {
+  string user_id = 1;
+  string role = 2; // BUYER, SELLER
+  string notional_value_inr = 3;
+  string nbse_fee_inr = 4;
+  StatutoryLevies statutory_levies = 5;
+  string total_deduction_inr = 6;
+  RevenueDistribution revenue_distribution = 7;
+}
+
+message CalculateTradeFeeResponse {
+  string calculation_id = 1;
+  string trade_id = 2;
+  ParticipantFeeBreakdown buyer_fee = 3;
+  ParticipantFeeBreakdown seller_fee = 4;
+  string total_exchange_revenue_inr = 5;
+  string proof_hash = 6;
+  int64 calculated_at_unix_ns = 7;
+}
+
+message ProcessSettlementFeeRequest {
+  string settlement_batch_id = 1;
+  repeated string trade_ids = 2;
+}
+
+message ProcessSettlementFeeResponse {
+  string settlement_batch_id = 1;
+  string total_settled_volume_inr = 2;
+  string total_nbse_fee_collected_inr = 3;
+  string total_treasury_transferred_inr = 4;
+  string total_cgf_transferred_inr = 5;
+  string total_ipf_transferred_inr = 6;
+  string total_tax_withheld_inr = 7;
+  string batch_merkle_root = 8;
+  bool success = 9;
+}
+
+message RevenueSummaryRequest {
+  int64 start_time_unix_s = 1;
+  int64 end_time_unix_s = 2;
+}
+
+message RevenueSummaryResponse {
+  string gross_turnover_inr = 1;
+  string gross_nbse_fee_inr = 2;
+  string allocated_treasury_inr = 3;
+  string allocated_cgf_inr = 4;
+  string allocated_ipf_inr = 5;
+  string total_stt_inr = 6;
+  string total_gst_inr = 7;
+  string total_stamp_duty_inr = 8;
+  string total_sebi_turnover_inr = 9;
+  int64 record_count = 10;
+}

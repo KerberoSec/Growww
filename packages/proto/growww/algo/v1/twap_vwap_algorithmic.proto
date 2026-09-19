@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package growww.algo.v1;
+
+option go_package = "growww/algo/v1;algov1";
+
+service AlgoExecutionEngineService {
+  rpc SubmitAlgoOrder (SubmitAlgoOrderRequest) returns (SubmitAlgoOrderResponse);
+  rpc CancelAlgoOrder (CancelAlgoOrderRequest) returns (CancelAlgoOrderResponse);
+  rpc PauseAlgoOrder (PauseAlgoOrderRequest) returns (PauseAlgoOrderResponse);
+  rpc ResumeAlgoOrder (ResumeAlgoOrderRequest) returns (ResumeAlgoOrderResponse);
+  rpc GetAlgoOrderStatus (GetAlgoOrderStatusRequest) returns (AlgoOrderStatusSnapshot);
+  rpc StreamAlgoExecutionEvents (StreamAlgoExecutionEventsRequest) returns (stream AlgoExecutionEvent);
+}
+
+enum AlgoStrategyType {
+  ALGO_STRATEGY_UNSPECIFIED = 0;
+  ALGO_STRATEGY_TWAP = 1;
+  ALGO_STRATEGY_VWAP = 2;
+  ALGO_STRATEGY_POV = 3;
+  ALGO_STRATEGY_ICEBERG = 4;
+  ALGO_STRATEGY_IMPLEMENTATION_SHORTFALL = 5;
+}
+
+enum AlgoOrderStatus {
+  ALGO_STATUS_UNSPECIFIED = 0;
+  ALGO_STATUS_PENDING = 1;
+  ALGO_STATUS_ACTIVE = 2;
+  ALGO_STATUS_PAUSED = 3;
+  ALGO_STATUS_COMPLETED = 4;
+  ALGO_STATUS_CANCELLED = 5;
+  ALGO_STATUS_REJECTED = 6;
+  ALGO_STATUS_EXPIRED = 7;
+}
+
+message SubmitAlgoOrderRequest {
+  string idempotency_key = 1;
+  string execution_token = 2; // Blinded Zero-PII institutional token
+  string isin = 3;
+  string side = 4;            // "BUY" or "SELL"
+  uint64 total_quantity = 5;  // Total units (with 6 decimal places implied, e.g. 100000000 = 100.000000)
+  AlgoStrategyType strategy_type = 6;
+  
+  // Execution Schedule Limits
+  int64 start_time_unix_ns = 7;
+  int64 end_time_unix_ns = 8;
+  uint64 limit_price_cap_paise = 9; // Worst-case limit price collar
+  
+  // TWAP Parameters
+  int64 twap_interval_seconds = 10;
+  bool enable_poisson_jitter = 11;
+  
+  // VWAP Parameters
+  string historical_profile_tag = 12; // e.g. "DEFAULT_30D", "EARNINGS_DAY"
+  double vwap_aggression_gamma = 13;  // Tuning coefficient (0.5 to 1.0)
+  
+  // POV Parameters
+  double target_participation_rate = 14; // e.g. 0.10 for 10%
+  double max_participation_rate = 15;    // Hard cap e.g. 0.15 for 15%
+  
+  // Iceberg Parameters
+  uint64 visible_tip_quantity = 16;
+  double display_variance_pct = 17;     // e.g. 0.20 for +/-20%
+  
+  // Implementation Shortfall Parameters
+  double risk_aversion_lambda = 18;
+  double expected_daily_volatility = 19;
+}
+
+message SubmitAlgoOrderResponse {
+  string parent_order_id = 1;
+  AlgoStrategyType strategy_type = 2;
+  AlgoOrderStatus status = 3;
+  int64 accepted_at_unix_ns = 4;
+  string rejection_reason = 5;
+}
+
+message CancelAlgoOrderRequest {
+  string parent_order_id = 1;
+  string execution_token = 2;
+  string reason = 3;
+}
+
+message CancelAlgoOrderResponse {
+  string parent_order_id = 1;
+  bool acknowledged = 2;
+  AlgoOrderStatus final_status = 3;
+}
+
+message PauseAlgoOrderRequest {
+  string parent_order_id = 1;
+  string execution_token = 2;
+}
+
+message PauseAlgoOrderResponse {
+  string parent_order_id = 1;
+  bool is_paused = 2;
+}
+
+message ResumeAlgoOrderRequest {
+  string parent_order_id = 1;
+  string execution_token = 2;
+}
+
+message ResumeAlgoOrderResponse {
+  string parent_order_id = 1;
+  bool is_resumed = 2;
+}
+
+message GetAlgoOrderStatusRequest {
+  string parent_order_id = 1;
+  string execution_token = 2;
+}
+
+message AlgoOrderStatusSnapshot {
+  string parent_order_id = 1;
+  string isin = 2;
+  string side = 3;
+  AlgoStrategyType strategy_type = 4;
+  AlgoOrderStatus status = 5;
+  uint64 total_quantity = 6;
+  uint64 executed_quantity = 7;
+  uint64 remaining_quantity = 8;
+  uint64 volume_weighted_average_price_paise = 9;
+  uint64 arrival_price_paise = 10;
+  int64 slippage_bps = 11;
+  uint32 slices_dispatched_count = 12;
+  uint32 slices_filled_count = 13;
+  int64 updated_at_unix_ns = 14;
+}
+
+message StreamAlgoExecutionEventsRequest {
+  string execution_token = 1;
+  string parent_order_id = 2; // Optional, empty for all orders belonging to token
+}
+
+message AlgoExecutionEvent {
+  string event_id = 1;
+  string parent_order_id = 2;
+  string slice_order_id = 3;
+  string isin = 4;
+  string side = 5;
+  uint64 slice_quantity = 6;
+  uint64 executed_price_paise = 7;
+  int64 execution_timestamp_ns = 8;
+  uint64 platform_fee_paise = 9;
+  uint64 treasury_fee_paise = 10;
+  uint64 sgf_fee_paise = 11;
+  uint64 ipf_fee_paise = 12;
+  string besu_settlement_voucher_hash = 13;
+}

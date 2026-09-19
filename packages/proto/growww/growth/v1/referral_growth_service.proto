@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package growww.growth.v1;
+
+option go_package = "github.com/growww/services/growth-service/gen/v1;growthv1";
+
+service ReferralGrowthService {
+  rpc GenerateReferralCode (GenerateCodeRequest) returns (GenerateCodeResponse);
+  rpc TrackClick (TrackClickRequest) returns (TrackClickResponse);
+  rpc AttributeUser (AttributeUserRequest) returns (AttributeUserResponse);
+  rpc GetUserRewardSummary (UserRewardSummaryRequest) returns (UserRewardSummaryResponse);
+  rpc ValidateFeeVoucher (ValidateVoucherRequest) returns (ValidateVoucherResponse);
+}
+
+message GenerateCodeRequest {
+  string user_id = 1;
+}
+
+message GenerateCodeResponse {
+  string referral_code = 1;
+  string referral_deep_link = 2;
+  string share_text = 3; // Pre-approved compliant sharing text
+}
+
+message TrackClickRequest {
+  string referral_code = 1;
+  string click_ip = 2;
+  string user_agent = 3;
+  string device_fingerprint = 4;
+}
+
+message TrackClickResponse {
+  string attribution_token = 1;
+  bool is_valid = 2;
+}
+
+message AttributeUserRequest {
+  string user_id = 1;
+  string attribution_token = 2;
+}
+
+message AttributeUserResponse {
+  bool attributed = 1;
+  string referrer_user_id = 2;
+  string campaign_id = 3;
+}
+
+message UserRewardSummaryRequest {
+  string user_id = 1;
+}
+
+message UserRewardSummaryResponse {
+  string user_id = 1;
+  int64 total_successful_referrals = 2;
+  int64 active_fee_vouchers_count = 3;
+  repeated FeeVoucherItem active_vouchers = 4;
+}
+
+message FeeVoucherItem {
+  string voucher_id = 1;
+  string discount_percentage = 2; // e.g. "50%" off platform fee
+  int64 max_discount_inr = 3;
+  int64 expires_at = 4;
+}
+
+message ValidateVoucherRequest {
+  string user_id = 1;
+  string trade_realized_profit_inr = 2;
+}
+
+message ValidateVoucherResponse {
+  bool is_valid = 1;
+  string voucher_id = 2;
+  string discount_amount_inr = 3;
+}

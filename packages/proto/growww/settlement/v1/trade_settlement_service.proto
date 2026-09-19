@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package growww.settlement.v1;
+
+option go_package = "growww/settlement/v1;settlementv1";
+
+service SettlementService {
+  rpc GetSettlementStatus (GetSettlementStatusRequest) returns (GetSettlementStatusResponse);
+  rpc RetryFailedSettlement (RetryFailedSettlementRequest) returns (RetryFailedSettlementResponse);
+}
+
+enum SettlementStatus {
+  SETTLEMENT_STATUS_UNSPECIFIED = 0;
+  SETTLEMENT_STATUS_PROCESSING = 1;
+  SETTLEMENT_STATUS_SETTLED = 2;
+  SETTLEMENT_STATUS_FAILED = 3;
+  SETTLEMENT_STATUS_COMPENSATED = 4;
+}
+
+message GetSettlementStatusRequest {
+  string trade_id = 1;
+}
+
+message GetSettlementStatusResponse {
+  string trade_id = 1;
+  SettlementStatus status = 2;
+  string buyer_user_id = 3;
+  string seller_user_id = 4;
+  string isin = 5;
+  string token_amount = 6;
+  string inr_amount = 7;
+  string tx_hash = 8; // On-chain Hyperledger Besu transaction hash
+  int64 block_number = 9;
+  int64 settled_at_unix = 10;
+  string error_message = 11;
+}
+
+message RetryFailedSettlementRequest {
+  string trade_id = 1;
+  string operator_reason = 2;
+}
+
+message RetryFailedSettlementResponse {
+  bool success = 1;
+  string new_settlement_status = 2;
+}

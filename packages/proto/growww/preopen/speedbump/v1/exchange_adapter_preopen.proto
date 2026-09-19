@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+package growww.preopen.speedbump.v1;
+
+option go_package = "growww/preopen/speedbump/v1;speedbumpv1";
+
+service PreOpenAuctionService {
+  rpc CompilePreOpenManifest (CompilePreOpenManifestRequest) returns (CompilePreOpenManifestResponse);
+  rpc DispatchPreOpenManifest (DispatchPreOpenManifestRequest) returns (DispatchPreOpenManifestResponse);
+  rpc GetManifestStatus (GetManifestStatusRequest) returns (GetManifestStatusResponse);
+}
+
+service CollarRealignmentService {
+  rpc IngestEquilibriumSnapshot (IngestEquilibriumSnapshotRequest) returns (IngestEquilibriumSnapshotResponse);
+  rpc GetDynamicCollars (GetDynamicCollarsRequest) returns (GetDynamicCollarsResponse);
+  rpc OverrideDynamicCollar (OverrideDynamicCollarRequest) returns (OverrideDynamicCollarResponse);
+}
+
+service SpeedBumpGuardService {
+  rpc EvaluateOrderSpeedBump (EvaluateOrderSpeedBumpRequest) returns (EvaluateOrderSpeedBumpResponse);
+  rpc UpdateSpeedBumpConfig (UpdateSpeedBumpConfigRequest) returns (UpdateSpeedBumpConfigResponse);
+  rpc GetSpeedBumpMetrics (GetSpeedBumpMetricsRequest) returns (GetSpeedBumpMetricsResponse);
+}
+
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+enum GuardAction {
+  GUARD_ACTION_UNSPECIFIED = 0;
+  GUARD_ACTION_PASS_IMMEDIATE = 1;
+  GUARD_ACTION_DELAY_500_MICROS = 2;
+  GUARD_ACTION_RECALIBRATE_PRICE = 3;
+  GUARD_ACTION_REJECT_TOXIC_SNIPE = 4;
+}
+
+message CompilePreOpenManifestRequest {
+  string session_date = 1; // "YYYY-MM-DD"
+  string exchange_code = 2; // "NSE" or "BSE"
+  repeated string order_ids = 3;
+  bool force_recompile = 4;
+}
+
+message CompilePreOpenManifestResponse {
+  string manifest_id = 1;
+  string manifest_code = 2;
+  string exchange_code = 3;
+  int32 total_orders = 4;
+  string total_quantity = 5;
+  string total_notional_inr = 6;
+  string manifest_checksum_sha256 = 7;
+  string compilation_status = 8;
+  int64 compiled_at_unix_nanos = 9;
+}
+
+message DispatchPreOpenManifestRequest {
+  string manifest_id = 1;
+  string target_dma_line_id = 2;
+  int32 orders_per_second_throttle = 3; // e.g., 5000
+}
+
+message DispatchPreOpenManifestResponse {
+  string manifest_id = 1;
+  string dispatch_status = 2; // "DISPATCHING", "DISPATCHED", "FAILED"
+  int64 dispatch_start_unix_nanos = 3;
+  int32 dispatched_order_count = 4;
+}
+
+message GetManifestStatusRequest {
+  string manifest_id = 1;
+}
+
+message GetManifestStatusResponse {
+  string manifest_id = 1;
+  string manifest_code = 2;
+  string dispatch_status = 3;
+  int32 total_orders = 4;
+  int32 acknowledged_orders = 5;
+  int32 rejected_orders = 6;
+  int64 dispatch_duration_micros = 7;
+}
+
+message IngestEquilibriumSnapshotRequest {
+  string isin = 1;
+  string trading_symbol = 2;
+  string exchange_code = 3;
+  string session_date = 4;
+  string indicative_equilibrium_price = 5;
+  int64 indicative_opening_volume = 6;
+  string previous_closing_price = 7;
+  int64 total_buy_quantity = 8;
+  int64 total_sell_quantity = 9;
+  int64 auction_clearing_timestamp_nanos = 10;
+}
+
+message IngestEquilibriumSnapshotResponse {
+  string isin = 1;
+  string realigned_upper_collar = 2;
+  string realigned_lower_collar = 3;
+  string price_shift_percent = 4;
+  bool realignment_applied = 5;
+}
+
+message GetDynamicCollarsRequest {
+  string isin = 1;
+  string exchange_code = 2;
+}
+
+message GetDynamicCollarsResponse {
+  string isin = 1;
+  string exchange_code = 2;
+  string base_reference_price = 3;
+  string dynamic_upper_collar = 4;
+  string dynamic_lower_collar = 5;
+  string circuit_band_percent = 6;
+  bool is_speedbump_enabled = 7;
+  int64 last_updated_unix_nanos = 8;
+}
+
+message OverrideDynamicCollarRequest {
+  string isin = 1;
+  string exchange_code = 2;
+  string manual_upper_collar = 3;
+  string manual_lower_collar = 4;
+  string override_reason = 5;
+  string authorized_by_admin_id = 6;
+}
+
+message OverrideDynamicCollarResponse {
+  string isin = 1;
+  bool override_applied = 2;
+  string active_upper_collar = 3;
+  string active_lower_collar = 4;
+  int64 updated_at_unix_nanos = 5;
+}
+
+message EvaluateOrderSpeedBumpRequest {
+  string order_id = 1;
+  string isin = 2;
+  string participant_id = 3;
+  OrderSide side = 4;
+  string order_type = 5; // "LIMIT", "MARKET", "IOC"
+  string price = 6;
+  string quantity = 7;
+  bool is_liquidity_taking = 8; // true = taker/aggressive, false = maker/passive
+  bool is_cancellation_or_amend = 9;
+  int64 ingress_timestamp_nanos = 10;
+}
+
+message EvaluateOrderSpeedBumpResponse {
+  string order_id = 1;
+  GuardAction action_taken = 2;
+  int32 delay_applied_micros = 3; // 0 for maker cancel/replace, 500 for taker
+  bool is_toxic_snipe_flagged = 4;
+  string effective_price = 5;
+  int64 egress_timestamp_nanos = 6;
+  string guard_decision_reason = 7;
+}
+
+message UpdateSpeedBumpConfigRequest {
+  string isin = 1;
+  bool is_enabled = 2;
+  int32 delay_duration_micros = 3; // default 500
+  repeated string exempt_participant_ids = 4;
+}
+
+message UpdateSpeedBumpConfigResponse {
+  string isin = 1;
+  bool is_enabled = 2;
+  int32 active_delay_micros = 3;
+  int64 updated_at_unix_nanos = 4;
+}
+
+message GetSpeedBumpMetricsRequest {
+  string isin = 1;
+  int64 window_duration_seconds = 2;
+}
+
+message GetSpeedBumpMetricsResponse {
+  string isin = 1;
+  int64 total_orders_evaluated = 2;
+  int64 orders_delayed_count = 3;
+  int64 orders_bypassed_count = 4;
+  int64 toxic_snipes_intercepted_count = 5;
+  double average_delay_micros = 6;
+  string estimated_saved_slippage_inr = 7;
+}

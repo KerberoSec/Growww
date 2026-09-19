@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package growww.events.v1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/growww/proto/gen/go/events/v1;eventsv1";
+
+message CloudEvent {
+  // CloudEvents Core Attributes (v1.0)
+  string id = 1;                     // Unique event UUIDv7
+  string source = 2;                 // URI identifying producer service (e.g., "/services/matching-engine")
+  string spec_version = 3;           // Must be "1.0"
+  string type = 4;                   // Event type URI (e.g., "growww.trading.order.matched.v1")
+  google.protobuf.Timestamp time = 5;// Event generation timestamp
+  string datacontenttype = 6;        // e.g., "application/x-protobuf" or "application/json"
+  string subject = 7;                // Target resource ID (e.g., "order_01HZX89AB...")
+
+  // Growww Enterprise Extension Attributes
+  string correlation_id = 8;         // Distributed tracing identifier
+  string actor_id = 9;               // User ID or Service Account triggering the event
+  string entity_id = 10;             // "DOMESTIC" or "GIFT_CITY"
+  string idempotency_key = 11;       // Unique deduplication key
+
+  // Business Payload
+  google.protobuf.Any data = 12;
+}

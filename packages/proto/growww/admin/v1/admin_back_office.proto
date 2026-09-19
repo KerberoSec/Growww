@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package growww.admin.v1;
+
+option go_package = "github.com/growww/services/admin-service/gen/v1;adminv1";
+
+service AdminBackOfficeService {
+  rpc CreateWorkflowProposal (CreateProposalRequest) returns (CreateProposalResponse);
+  rpc ApproveWorkflowProposal (ApproveProposalRequest) returns (ApproveProposalResponse);
+  rpc RejectWorkflowProposal (RejectProposalRequest) returns (RejectProposalResponse);
+  rpc FreezeUserAccount (FreezeAccountRequest) returns (FreezeAccountResponse);
+  rpc ResolveException (ResolveExceptionRequest) returns (ResolveExceptionResponse);
+}
+
+message CreateProposalRequest {
+  string action_type = 1; // FREEZE_ACCOUNT / UNFREEZE / MANUAL_LEDGER_ADJUST / ASSET_PAUSE
+  string target_resource_id = 2;
+  string justification = 3;
+  string supporting_document_hash = 4;
+  string maker_admin_id = 5;
+}
+
+message CreateProposalResponse {
+  string proposal_id = 1;
+  string status = 2; // PENDING_APPROVAL
+  int64 created_at = 3;
+}
+
+message ApproveProposalRequest {
+  string proposal_id = 1;
+  string checker_admin_id = 2;
+  string fido2_auth_token = 3;
+  string comments = 4;
+}
+
+message ApproveProposalResponse {
+  string proposal_id = 1;
+  string status = 2; // APPROVED / EXECUTED / ON_CHAIN_PENDING
+  string on_chain_tx_hash = 3;
+  int64 executed_at = 4;
+}
+
+message RejectProposalRequest {
+  string proposal_id = 1;
+  string checker_admin_id = 2;
+  string rejection_reason = 3;
+}
+
+message RejectProposalResponse {
+  string proposal_id = 1;
+  string status = 2; // REJECTED
+  int64 rejected_at = 3;
+}
+
+message FreezeAccountRequest {
+  string user_id = 1;
+  string freeze_scope = 2; // TOTAL / TRADING_ONLY / WITHDRAWAL_ONLY
+  string regulatory_notice_ref = 3;
+  string maker_admin_id = 4;
+}
+
+message FreezeAccountResponse {
+  string proposal_id = 1;
+  string status = 2;
+}
+
+message ResolveExceptionRequest {
+  string exception_id = 1;
+  string resolution_action = 2;
+  string adjustment_amount_inr = 3;
+  string maker_admin_id = 4;
+}
+
+message ResolveExceptionResponse {
+  string proposal_id = 1;
+  string status = 2;
+}

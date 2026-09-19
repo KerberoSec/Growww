@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package growww.auction.v1;
+
+option go_package = "growww/auction/v1;auctionv1";
+
+service AuctionResolverService {
+  rpc RegisterShortDelivery (RegisterShortDeliveryRequest) returns (RegisterShortDeliveryResponse);
+  rpc CreateAuctionSession (CreateAuctionSessionRequest) returns (CreateAuctionSessionResponse);
+  rpc SubmitAuctionBid (SubmitAuctionBidRequest) returns (SubmitAuctionBidResponse);
+  rpc ExecuteAuctionMatching (ExecuteAuctionMatchingRequest) returns (ExecuteAuctionMatchingResponse);
+  rpc ExecuteFinancialCloseout (ExecuteFinancialCloseoutRequest) returns (ExecuteFinancialCloseoutResponse);
+  rpc GetAuctionSessionStatus (GetAuctionSessionStatusRequest) returns (GetAuctionSessionStatusResponse);
+}
+
+enum AuctionStatus {
+  AUCTION_STATUS_UNSPECIFIED = 0;
+  AUCTION_STATUS_SCHEDULED = 1;
+  AUCTION_STATUS_OPEN_FOR_BIDS = 2;
+  AUCTION_STATUS_MATCHING = 3;
+  AUCTION_STATUS_COMPLETED = 4;
+  AUCTION_STATUS_PARTIAL_CLOSEOUT = 5;
+  AUCTION_STATUS_FULL_CLOSEOUT = 6;
+}
+
+message RegisterShortDeliveryRequest {
+  string settlement_cycle_id = 1;
+  string original_trade_id = 2;
+  string defaulting_member_id = 3;
+  string defaulting_ledger_address = 4;
+  string buyer_member_id = 5;
+  string buyer_ledger_address = 6;
+  string isin = 7;
+  string short_quantity = 8; // Fractional equity quantity
+  string original_trade_price = 9;
+}
+
+message RegisterShortDeliveryResponse {
+  string short_delivery_id = 1;
+  string auction_session_id = 2;
+  string maximum_auction_price = 3;
+  int64 auction_start_time_unix = 4;
+  int64 auction_end_time_unix = 5;
+}
+
+message CreateAuctionSessionRequest {
+  string isin = 1;
+  string settlement_cycle_id = 2;
+  string total_short_quantity = 3;
+  string reference_closing_price = 4;
+  string price_cap = 5;
+  int64 bid_window_seconds = 6;
+}
+
+message CreateAuctionSessionResponse {
+  string auction_session_id = 1;
+  AuctionStatus status = 2;
+  string price_cap = 3;
+}
+
+message SubmitAuctionBidRequest {
+  string auction_session_id = 1;
+  string seller_user_id = 2;
+  string seller_ledger_address = 3;
+  string offer_quantity = 4;
+  string offer_price = 5; // Must be <= price_cap
+}
+
+message SubmitAuctionBidResponse {
+  string bid_id = 1;
+  bool accepted = 2;
+  string rejection_reason = 3;
+  int64 submitted_at_unix_ns = 4;
+}
+
+message ExecuteAuctionMatchingRequest {
+  string auction_session_id = 1;
+}
+
+message AuctionMatchedTrade {
+  string auction_trade_id = 1;
+  string bid_id = 2;
+  string seller_user_id = 3;
+  string matched_quantity = 4;
+  string matched_price = 5;
+  string total_inr_value = 6;
+}
+
+message ExecuteAuctionMatchingResponse {
+  string auction_session_id = 1;
+  string total_short_quantity = 2;
+  string total_procured_quantity = 3;
+  string remaining_unfilled_quantity = 4;
+  repeated AuctionMatchedTrade trades = 5;
+  AuctionStatus resulting_status = 6;
+}
+
+message ExecuteFinancialCloseoutRequest {
+  string short_delivery_id = 1;
+  string unfilled_quantity = 2;
+  string closeout_price = 3;
+  string penalty_rate_percent = 4;
+}
+
+message ExecuteFinancialCloseoutResponse {
+  string closeout_id = 1;
+  string buyer_credit_amount_inr = 2;
+  string defaulter_debit_amount_inr = 3;
+  string core_sgf_penalty_inr = 4;
+  string ipf_penalty_inr = 5;
+  bool is_settled = 6;
+}
+
+message GetAuctionSessionStatusRequest {
+  string auction_session_id = 1;
+}
+
+message GetAuctionSessionStatusResponse {
+  string auction_session_id = 1;
+  string isin = 2;
+  AuctionStatus status = 3;
+  string short_quantity = 4;
+  string filled_quantity = 5;
+  string price_cap = 6;
+  int32 total_bids_received = 7;
+}

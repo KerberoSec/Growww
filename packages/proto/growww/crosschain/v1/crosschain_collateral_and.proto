@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package growww.crosschain.v1;
+
+option go_package = "github.com/growww/services/crosschain-fx-router/gen/v1;crosschainv1";
+
+service CrossChainCollateralRouterService {
+  rpc RegisterCollateralDeposit (RegisterDepositRequest) returns (RegisterDepositResponse);
+  rpc GetCollateralValuation (CollateralValuationRequest) returns (CollateralValuationResponse);
+  rpc CalculateSyntheticMargin (SyntheticMarginRequest) returns (SyntheticMarginResponse);
+  rpc ExecuteHedgingOrder (HedgingOrderRequest) returns (HedgingOrderResponse);
+  rpc GetMarginHealth (MarginHealthRequest) returns (MarginHealthResponse);
+  rpc TriggerCollateralRebalance (RebalanceRequest) returns (RebalanceResponse);
+}
+
+enum CollateralAsset {
+  COLLATERAL_ASSET_UNSPECIFIED = 0;
+  COLLATERAL_ASSET_BTC = 1;
+  COLLATERAL_ASSET_ETH = 2;
+  COLLATERAL_ASSET_SOL = 3;
+  COLLATERAL_ASSET_USDC = 4;
+}
+
+enum TargetMarginCurrency {
+  MARGIN_CURRENCY_UNSPECIFIED = 0;
+  MARGIN_CURRENCY_EUSD = 1;
+  MARGIN_CURRENCY_EINR = 2;
+}
+
+enum BlockchainNetwork {
+  NETWORK_UNSPECIFIED = 0;
+  NETWORK_BITCOIN_MAINNET = 1;
+  NETWORK_ETHEREUM_MAINNET = 2;
+  NETWORK_SOLANA_MAINNET = 3;
+  NETWORK_ARBITRUM_ONE = 4;
+}
+
+enum DepositStatus {
+  DEPOSIT_STATUS_UNSPECIFIED = 0;
+  DEPOSIT_STATUS_DETECTED = 1;
+  DEPOSIT_STATUS_CONFIRMING = 2;
+  DEPOSIT_STATUS_CONFIRMED = 3;
+  DEPOSIT_STATUS_REJECTED = 4;
+}
+
+enum HedgingVenueType {
+  VENUE_TYPE_UNSPECIFIED = 0;
+  VENUE_TYPE_CEX_SPOT = 1;
+  VENUE_TYPE_CEX_PERPETUAL = 2;
+  VENUE_TYPE_DEX_SWAP = 3;
+}
+
+message RegisterDepositRequest {
+  string investor_account_id = 1;
+  BlockchainNetwork network = 2;
+  CollateralAsset asset = 3;
+  string tx_hash = 4;
+  string deposit_address = 5;
+  string amount_raw = 6;
+  uint32 confirmation_count = 7;
+}
+
+message RegisterDepositResponse {
+  string deposit_id = 1;
+  DepositStatus status = 2;
+  string haircut_percentage = 3; // e.g., "20.00"
+  string effective_collateral_usd = 4;
+  int64 registered_at_utc = 5;
+}
+
+message CollateralValuationRequest {
+  string investor_account_id = 1;
+}
+
+message CollateralPosition {
+  CollateralAsset asset = 1;
+  string quantity = 2;
+  string mark_price_usd = 3;
+  string oracle_source = 4;
+  string haircut_percentage = 5;
+  string gross_value_usd = 6;
+  string net_collateral_value_usd = 7;
+}
+
+message CollateralValuationResponse {
+  string investor_account_id = 1;
+  repeated CollateralPosition positions = 2;
+  string total_gross_value_usd = 3;
+  string total_net_collateral_usd = 4;
+  string synthetic_margin_e_usd = 5;
+  string synthetic_margin_e_inr = 6;
+  string fx_rate_usd_inr = 7;
+  int64 valuation_timestamp_utc = 8;
+}
+
+message SyntheticMarginRequest {
+  string investor_account_id = 1;
+  TargetMarginCurrency target_currency = 2;
+}
+
+message SyntheticMarginResponse {
+  string investor_account_id = 1;
+  TargetMarginCurrency target_currency = 2;
+  string available_margin = 3;
+  string used_margin = 4;
+  string free_margin = 5;
+  string health_ratio_percentage = 6;
+}
+
+message HedgingOrderRequest {
+  string investor_account_id = 1;
+  CollateralAsset asset = 2;
+  string hedge_quantity = 3;
+  HedgingVenueType preferred_venue = 4;
+  uint32 max_slippage_bps = 5; // e.g., 15 bps = 0.15%
+}
+
+message HedgingOrderResponse {
+  string hedge_order_id = 1;
+  string venue_name = 2;
+  string executed_price_usd = 3;
+  string executed_quantity = 4;
+  uint32 actual_slippage_bps = 5;
+  string status = 6; // FILLED / PARTIALLY_FILLED / REJECTED
+  int64 executed_at_utc = 7;
+}
+
+message MarginHealthRequest {
+  string investor_account_id = 1;
+}
+
+message MarginHealthResponse {
+  string investor_account_id = 1;
+  string health_ratio_percentage = 2;
+  string maintenance_margin_required_usd = 3;
+  string effective_collateral_value_usd = 4;
+  bool is_margin_call_active = 5;
+  bool is_liquidation_eligible = 6;
+}
+
+message RebalanceRequest {
+  string investor_account_id = 1;
+  string reason = 2;
+}
+
+message RebalanceResponse {
+  string rebalance_id = 1;
+  string status = 2;
+  string liquidated_collateral_usd = 3;
+  string restored_health_ratio = 4;
+  int64 processed_at_utc = 5;
+}

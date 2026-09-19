@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package growww.telemetry.v1;
+
+option go_package = "github.com/growww/platform/gen/go/telemetry/v1;telemetryv1";
+
+// Distributed trace context carrier for internal gRPC headers and binary serialization
+message TraceContext {
+  // W3C compliant 128-bit trace ID represented as 32 hex characters
+  string trace_id = 1;
+  
+  // W3C compliant 64-bit parent span ID represented as 16 hex characters
+  string span_id = 2;
+  
+  // 8-bit trace flags represented as 2 hex characters (e.g., '01' for sampled)
+  string trace_flags = 3;
+  
+  // Vendor-specific state key-value pairs per W3C specification
+  string trace_state = 4;
+  
+  // Distributed baggage key-value pairs propagating business context
+  map<string, string> baggage = 5;
+}
+
+// Latency profile checkpoint emitted by ultra-low-latency engines
+message LatencyProfileEvent {
+  string trace_id = 1;
+  string span_id = 2;
+  string component_name = 3;
+  string event_name = 4;
+  uint64 timestamp_unix_nanos = 5;
+  uint64 cpu_cycle_counter = 6;
+  map<string, string> attributes = 7;
+}

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package growww.fx.v1;
+
+option go_package = "github.com/growww/services/gift-city-fx/gen/v1;fxv1";
+
+service ForeignFundingFXService {
+  rpc RequestFXQuote (FXQuoteRequest) returns (FXQuoteResponse);
+  rpc ExecuteFXConversion (FXConversionRequest) returns (FXConversionResponse);
+  rpc IngestCrossBorderTransfer (TransferIngestionRequest) returns (TransferIngestionResponse);
+  rpc GetForeignAccountBalance (AccountBalanceRequest) returns (AccountBalanceResponse);
+}
+
+message FXQuoteRequest {
+  string investor_id = 1;
+  string source_currency = 2; // USD, EUR, GBP, AED, SGD
+  string target_currency = 3; // INR
+  string amount = 4; // High-precision string representation
+  string direction = 5; // BUY_INR / SELL_INR
+}
+
+message FXQuoteResponse {
+  string quote_id = 1;
+  string source_currency = 2;
+  string target_currency = 3;
+  string exchange_rate = 4;
+  string inverted_rate = 5;
+  string gross_target_amount = 6;
+  string bank_fee_inr = 7;
+  string net_target_amount = 8;
+  int64 expires_at_timestamp = 9;
+}
+
+message FXConversionRequest {
+  string quote_id = 1;
+  string investor_id = 2;
+  string idempotency_key = 3;
+}
+
+message FXConversionResponse {
+  string conversion_id = 1;
+  string status = 2; // SETTLED / PENDING_BANK / FAILED
+  string source_currency = 3;
+  string source_amount = 4;
+  string settled_inr_amount = 5;
+  string bank_deal_reference = 6;
+  int64 settled_at = 7;
+}
+
+message TransferIngestionRequest {
+  string bank_wire_reference = 1;
+  string swift_message_type = 2;
+  string raw_wire_payload = 3;
+  string sender_bic = 4;
+  string receiving_iban = 5;
+  string currency = 6;
+  string amount = 7;
+}
+
+message TransferIngestionResponse {
+  string transfer_id = 1;
+  string matched_investor_id = 2;
+  string status = 3; // CREDITED / HELD_COMPLIANCE / UNMATCHED
+  string message = 4;
+}
+
+message AccountBalanceRequest {
+  string investor_id = 1;
+}
+
+message AccountBalanceResponse {
+  string investor_id = 1;
+  repeated CurrencyBalance balances = 2;
+}
+
+message CurrencyBalance {
+  string currency = 1;
+  string total_balance = 2;
+  string available_balance = 3;
+  string locked_in_orders = 4;
+}

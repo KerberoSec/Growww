@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package growww.reporting.v1;
+
+option go_package = "github.com/growww/services/reporting-service/gen/v1;reportingv1";
+
+service RegulatoryReportingService {
+  rpc GenerateReport (GenerateReportRequest) returns (GenerateReportResponse);
+  rpc GetReportStatus (ReportStatusRequest) returns (ReportStatusResponse);
+  rpc ApproveFiling (ApproveFilingRequest) returns (ApproveFilingResponse);
+  rpc ListPendingFilings (ListPendingFilingsRequest) returns (ListPendingFilingsResponse);
+}
+
+message GenerateReportRequest {
+  string regulator = 1; // SEBI / RBI / FIU_IND / IFSCA
+  string report_type = 2; // SEBI_HOLDING_MONTHLY / FIU_STR / RBI_FETERS / IFSCA_QTR
+  string period_start = 3; // YYYY-MM-DD
+  string period_end = 4;   // YYYY-MM-DD
+  bool dry_run = 5;
+}
+
+message GenerateReportResponse {
+  string report_id = 1;
+  string status = 2; // GENERATING / READY_FOR_REVIEW
+  string file_format = 3; // XML / XBRL / PDF
+  int64 generated_at = 4;
+}
+
+message ReportStatusRequest {
+  string report_id = 1;
+}
+
+message ReportStatusResponse {
+  string report_id = 1;
+  string regulator = 2;
+  string report_type = 3;
+  string status = 4; // PENDING_APPROVAL / APPROVED / SUBMITTED / REJECTED
+  string download_url = 5;
+  string sha256_checksum = 6;
+  string blockchain_merkle_root = 7;
+  int64 created_at = 8;
+  int64 submitted_at = 9;
+}
+
+message ApproveFilingRequest {
+  string report_id = 1;
+  string compliance_officer_id = 2;
+  string digital_signature_token = 3;
+}
+
+message ApproveFilingResponse {
+  string report_id = 1;
+  bool submitted = 2;
+  string acknowledgment_receipt = 3;
+  int64 submission_timestamp = 4;
+}
+
+message ListPendingFilingsRequest {
+  string regulator = 1;
+}
+
+message ListPendingFilingsResponse {
+  repeated ReportSummary reports = 1;
+}
+
+message ReportSummary {
+  string report_id = 1;
+  string report_type = 2;
+  string period = 3;
+  string created_at = 4;
+}

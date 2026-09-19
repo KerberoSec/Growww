@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package growww.span.v1;
+
+option go_package = "growww/span/v1;spanv1";
+
+service SpanMarginEngineService {
+  rpc EvaluateSPANMargin (EvaluateSPANMarginRequest) returns (EvaluateSPANMarginResponse);
+  rpc CheckPreOrderSPAN (CheckPreOrderSPANRequest) returns (CheckPreOrderSPANResponse);
+  rpc GetAccountHealth (GetAccountHealthRequest) returns (GetAccountHealthResponse);
+  rpc UpdateRiskParameters (UpdateRiskParametersRequest) returns (UpdateRiskParametersResponse);
+  rpc TriggerManualLiquidation (TriggerManualLiquidationRequest) returns (TriggerManualLiquidationResponse);
+}
+
+enum AccountRiskState {
+  ACCOUNT_RISK_STATE_UNSPECIFIED = 0;
+  ACCOUNT_RISK_STATE_HEALTHY = 1;
+  ACCOUNT_RISK_STATE_WARNING = 2;
+  ACCOUNT_RISK_STATE_MARGIN_CALL = 3;
+  ACCOUNT_RISK_STATE_LIQUIDATING = 4;
+  ACCOUNT_RISK_STATE_LOCKED = 5;
+}
+
+enum LiquidationStage {
+  LIQUIDATION_STAGE_UNSPECIFIED = 0;
+  LIQUIDATION_STAGE_CANCEL_OPEN_ORDERS = 1;
+  LIQUIDATION_STAGE_PARTIAL_SLICE_AUCTION = 2;
+  LIQUIDATION_STAGE_AGGRESSIVE_MARKET_TWAP = 3;
+  LIQUIDATION_STAGE_BACKSTOP_TAKEOVER = 4;
+  LIQUIDATION_STAGE_COMPLETED = 5;
+}
+
+message ContractPosition {
+  string contract_id = 1;
+  string underlying_id = 2;
+  string isin = 3;
+  string contract_type = 4; // EQUITY, FUTURE, CALL_OPTION, PUT_OPTION
+  string strike_price = 5; // Decimal string (INR)
+  int64 expiry_timestamp = 6;
+  string side = 7; // LONG, SHORT
+  string quantity = 8; // Fractional decimal string
+  string average_entry_price = 9;
+  string current_mark_price = 10;
+  string delta = 11;
+  string gamma = 12;
+  string implied_volatility = 13;
+}
+
+message ScenarioLoss {
+  int32 scenario_number = 1; // 1 through 16
+  string price_shift_fraction = 2; // e.g. "+0.3333", "-1.0000", "+2.0000"
+  string vol_shift_fraction = 3; // e.g. "+1.0000", "-1.0000", "0.0000"
+  string theoretical_loss_inr = 4;
+}
+
+message EvaluateSPANMarginRequest {
+  string user_id = 1;
+  string ledger_address = 2;
+  repeated ContractPosition positions = 3;
+  string total_effective_collateral_inr = 4;
+}
+
+message EvaluateSPANMarginResponse {
+  string user_id = 1;
+  string scanning_risk_inr = 2;
+  string intra_commodity_charge_inr = 3;
+  string inter_commodity_credit_inr = 4;
+  string short_option_minimum_inr = 5;
+  string extreme_loss_margin_inr = 6;
+  string delivery_margin_inr = 7;
+  string total_initial_margin_inr = 8;
+  string maintenance_margin_inr = 9;
+  string unrealized_mtm_pnl_inr = 10;
+  string current_equity_inr = 11;
+  string health_ratio = 12;
+  AccountRiskState risk_state = 13;
+  repeated ScenarioLoss scenario_breakdown = 14;
+  int64 calculated_at_unix_ns = 15;
+}
+
+message CheckPreOrderSPANRequest {
+  string user_id = 1;
+  string ledger_address = 2;
+  string contract_id = 3;
+  string side = 4; // BUY, SELL
+  string order_type = 5; // LIMIT, MARKET
+  string price = 6;
+  string quantity = 7;
+}
+
+message CheckPreOrderSPANResponse {
+  bool approved = 1;
+  string current_initial_margin_inr = 2;
+  string required_initial_margin_inr = 3;
+  string post_trade_equity_inr = 4;
+  string post_trade_health_ratio = 5;
+  string reject_reason = 6;
+}
+
+message GetAccountHealthRequest {
+  string user_id = 1;
+}
+
+message GetAccountHealthResponse {
+  string user_id = 1;
+  AccountRiskState risk_state = 2;
+  string health_ratio = 3;
+  string effective_collateral_inr = 4;
+  string total_margin_required_inr = 5;
+  string free_margin_inr = 6;
+  string unrealized_mtm_inr = 7;
+  bool is_liquidation_active = 8;
+  int64 last_evaluation_time_unix_ms = 9;
+}
+
+message UpdateRiskParametersRequest {
+  string underlying_id = 1;
+  string price_scan_range_inr = 2;
+  string vol_scan_range_percent = 3;
+  string intra_spread_charge_rate = 4;
+  string short_option_minimum_rate = 5;
+  string extreme_move_loss_fraction = 6;
+  string maintenance_margin_factor = 7;
+}
+
+message UpdateRiskParametersResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message TriggerManualLiquidationRequest {
+  string user_id = 1;
+  string reason = 2;
+  string operator_id = 3;
+}
+
+message TriggerManualLiquidationResponse {
+  string liquidation_id = 1;
+  bool initiated = 2;
+  string message = 3;
+}

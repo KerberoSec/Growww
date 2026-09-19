@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package growww.clawback.v1;
+
+option go_package = "growww/clawback/v1;clawbackv1";
+
+service ClawbackSagaService {
+  rpc TriggerReorgClawback (TriggerClawbackRequest) returns (TriggerClawbackResponse);
+  rpc GetSagaStatus (GetSagaStatusRequest) returns (GetSagaStatusResponse);
+  rpc ListActiveSagas (ListActiveSagasRequest) returns (ListActiveSagasResponse);
+  rpc RetryFailedPhase (RetryFailedPhaseRequest) returns (RetryFailedPhaseResponse);
+  rpc EscalateToSGF (EscalateToSGFRequest) returns (EscalateToSGFResponse);
+}
+
+enum ChainIdentifier {
+  CHAIN_IDENTIFIER_UNSPECIFIED = 0;
+  CHAIN_IDENTIFIER_BITCOIN = 1;
+  CHAIN_IDENTIFIER_ETHEREUM = 2;
+  CHAIN_IDENTIFIER_SOLANA = 3;
+  CHAIN_IDENTIFIER_ARBITRUM = 4;
+  CHAIN_IDENTIFIER_POLYGON = 5;
+}
+
+enum SagaStatus {
+  SAGA_STATUS_UNSPECIFIED = 0;
+  SAGA_STATUS_INITIATED = 1;
+  SAGA_STATUS_IN_PROGRESS = 2;
+  SAGA_STATUS_COMPLETED_SOLVENT = 3;
+  SAGA_STATUS_COMPLETED_DEFICIT_ESCALATED = 4;
+  SAGA_STATUS_COMPENSATING = 5;
+  SAGA_STATUS_FAILED_MANUAL_INTERVENTION = 6;
+}
+
+enum SagaPhase {
+  SAGA_PHASE_UNSPECIFIED = 0;
+  SAGA_PHASE_1_ACCOUNT_FREEZE = 1;
+  SAGA_PHASE_2_ORDER_CANCELLATION = 2;
+  SAGA_PHASE_3_PRIORITY_LIQUIDATION = 3;
+  SAGA_PHASE_4_DELTA_HEDGE_UNWIND = 4;
+  SAGA_PHASE_5_BESU_TOKEN_BURN = 5;
+}
+
+enum PhaseExecutionStatus {
+  PHASE_STATUS_UNSPECIFIED = 0;
+  PHASE_STATUS_PENDING = 1;
+  PHASE_STATUS_EXECUTING = 2;
+  PHASE_STATUS_SUCCEEDED = 3;
+  PHASE_STATUS_FAILED_RETRYABLE = 4;
+  PHASE_STATUS_FAILED_FATAL = 5;
+  PHASE_STATUS_COMPENSATED = 6;
+}
+
+message TriggerClawbackRequest {
+  string reorg_event_id = 1;
+  ChainIdentifier source_chain = 2;
+  int64 reorg_depth_blocks = 3;
+  string orphaned_block_hash = 4;
+  string canonical_block_hash = 5;
+  string invalidated_tx_hash = 6;
+  string affected_user_id = 7;
+  string asset_symbol = 8;
+  string invalidated_amount = 9; // Fixed-point numeric string (18 decimals)
+  string reason_code = 10;
+}
+
+message TriggerClawbackResponse {
+  string saga_id = 1;
+  SagaStatus status = 2;
+  int64 initiated_at_unix_ns = 3;
+  string idempotency_key = 4;
+}
+
+message PhaseDetail {
+  SagaPhase phase = 1;
+  PhaseExecutionStatus status = 2;
+  int64 started_at_unix_ns = 3;
+  int64 completed_at_unix_ns = 4;
+  int32 retry_count = 5;
+  string error_message = 6;
+  string result_payload_json = 7;
+}
+
+message GetSagaStatusRequest {
+  string saga_id = 1;
+}
+
+message GetSagaStatusResponse {
+  string saga_id = 1;
+  string reorg_event_id = 2;
+  string user_id = 3;
+  SagaStatus status = 4;
+  SagaPhase current_phase = 5;
+  repeated PhaseDetail phase_history = 6;
+  string total_invalidated_amount = 7;
+  string liquidated_equity_recovered_inr = 8;
+  string remaining_deficit_inr = 9;
+  string besu_burn_tx_hash = 10;
+  string merkle_proof_root = 11;
+  int64 created_at_unix_ns = 12;
+  int64 updated_at_unix_ns = 13;
+}
+
+message ListActiveSagasRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListActiveSagasResponse {
+  repeated GetSagaStatusResponse active_sagas = 1;
+  string next_page_token = 2;
+}
+
+message RetryFailedPhaseRequest {
+  string saga_id = 1;
+  SagaPhase phase = 2;
+  bool force_override = 3;
+  string override_reason = 4;
+}
+
+message RetryFailedPhaseResponse {
+  string saga_id = 1;
+  SagaPhase phase = 2;
+  PhaseExecutionStatus new_status = 3;
+}
+
+message EscalateToSGFRequest {
+  string saga_id = 1;
+  string deficit_amount_inr = 2;
+  string rationale = 3;
+}
+
+message EscalateToSGFResponse {
+  string saga_id = 1;
+  string sgf_claim_id = 2;
+  bool claim_accepted = 3;
+}

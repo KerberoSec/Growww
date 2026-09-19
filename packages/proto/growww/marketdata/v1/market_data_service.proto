@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package growww.marketdata.v1;
+
+option go_package = "growww/marketdata/v1;marketdatav1";
+
+service MarketDataService {
+  rpc GetCandles (GetCandlesRequest) returns (GetCandlesResponse);
+  rpc GetTickerSnapshot (GetTickerSnapshotRequest) returns (GetTickerSnapshotResponse);
+}
+
+message GetCandlesRequest {
+  string isin = 1;
+  string interval = 2; // "1m", "5m", "15m", "1h", "1d"
+  int64 from_timestamp_unix = 3;
+  int64 to_timestamp_unix = 4;
+  int32 limit = 5; // Max 1000
+}
+
+message CandleDto {
+  int64 timestamp_unix = 1;
+  string open = 2;
+  string high = 3;
+  string low = 4;
+  string close = 5;
+  string volume = 6;
+}
+
+message GetCandlesResponse {
+  string isin = 1;
+  string interval = 2;
+  repeated CandleDto candles = 3;
+}
+
+message GetTickerSnapshotRequest {
+  string isin = 1;
+}
+
+message GetTickerSnapshotResponse {
+  string isin = 1;
+  string ltp = 2;
+  string change_percent = 3;
+  string high = 4;
+  string low = 5;
+  string volume = 6;
+  int64 timestamp_unix = 7;
+}

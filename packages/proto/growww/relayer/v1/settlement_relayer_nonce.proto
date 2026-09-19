@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package growww.relayer.v1;
+
+option go_package = "growww/relayer/v1;relayerv1";
+
+service SettlementRelayerService {
+  rpc SubmitSettlementTx (SubmitSettlementTxRequest) returns (SubmitSettlementTxResponse);
+  rpc GetTransactionStatus (GetTransactionStatusRequest) returns (GetTransactionStatusResponse);
+  rpc GetRelayerPoolStatus (GetRelayerPoolStatusRequest) returns (GetRelayerPoolStatusResponse);
+  rpc ResyncRelayerNonce (ResyncRelayerNonceRequest) returns (ResyncRelayerNonceResponse);
+}
+
+enum TransactionState {
+  TRANSACTION_STATE_UNSPECIFIED = 0;
+  TRANSACTION_STATE_QUEUED = 1;
+  TRANSACTION_STATE_NONCE_ASSIGNED = 2;
+  TRANSACTION_STATE_SIGNED = 3;
+  TRANSACTION_STATE_BROADCAST = 4;
+  TRANSACTION_STATE_ESCALATED = 5;
+  TRANSACTION_STATE_MINED = 6;
+  TRANSACTION_STATE_FINALIZED = 7;
+  TRANSACTION_STATE_REVERTED = 8;
+  TRANSACTION_STATE_FAILED_EXHAUSTED = 9;
+}
+
+message SubmitSettlementTxRequest {
+  string request_id = 1;
+  string trade_id = 2;
+  string settlement_batch_id = 3;
+  string isin = 4;
+  string contract_address = 5;
+  bytes call_data = 6;
+  uint64 gas_limit = 7;
+  string initial_gas_price_wei = 8;
+  int64 priority = 9;
+}
+
+message SubmitSettlementTxResponse {
+  string request_id = 1;
+  string trade_id = 2;
+  uint32 partition_id = 3;
+  string relayer_address = 4;
+  uint64 assigned_nonce = 5;
+  string initial_tx_hash = 6;
+  TransactionState state = 7;
+  int64 submitted_at_unix_ns = 8;
+}
+
+message GetTransactionStatusRequest {
+  string trade_id = 1;
+  string tx_hash = 2;
+}
+
+message EscalationRecord {
+  uint32 escalation_round = 1;
+  string tx_hash = 2;
+  string gas_price_wei = 3;
+  int64 escalated_at_unix_ns = 4;
+  string reason = 5;
+}
+
+message GetTransactionStatusResponse {
+  string trade_id = 1;
+  string settlement_batch_id = 2;
+  string isin = 3;
+  uint32 partition_id = 4;
+  string relayer_address = 5;
+  uint64 nonce = 6;
+  string current_tx_hash = 7;
+  repeated EscalationRecord escalation_history = 8;
+  TransactionState state = 9;
+  uint64 block_number = 10;
+  string block_hash = 11;
+  uint64 gas_used = 12;
+  bool is_reverted = 13;
+  string revert_reason = 14;
+  int64 created_at_unix_ns = 15;
+  int64 finalized_at_unix_ns = 16;
+}
+
+message PartitionHealth {
+  uint32 partition_id = 1;
+  string relayer_address = 2;
+  uint64 confirmed_nonce = 3;
+  uint64 next_assignable_nonce = 4;
+  uint32 pending_in_flight_count = 5;
+  uint32 queued_job_count = 6;
+  bool is_healthy = 7;
+  int64 last_resync_at_unix_ns = 8;
+}
+
+message GetRelayerPoolStatusRequest {}
+
+message GetRelayerPoolStatusResponse {
+  repeated PartitionHealth partitions = 1;
+  uint32 total_active_partitions = 2;
+  uint32 total_in_flight_transactions = 3;
+  int64 observed_at_unix_ns = 4;
+}
+
+message ResyncRelayerNonceRequest {
+  uint32 partition_id = 1;
+  bool force_override = 2;
+}
+
+message ResyncRelayerNonceResponse {
+  uint32 partition_id = 1;
+  string relayer_address = 2;
+  uint64 previous_redis_nonce = 3;
+  uint64 besu_latest_nonce = 4;
+  uint64 besu_pending_nonce = 5;
+  uint64 synced_nonce = 6;
+  bool success = 7;
+  string message = 8;
+}

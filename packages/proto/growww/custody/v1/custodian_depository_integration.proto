@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package growww.custody.v1;
+
+option go_package = "github.com/growww/services/custody-adapter/gen/v1;custodyv1";
+
+service CustodyAdapterService {
+  rpc SubmitSettlementInstruction (SettlementInstructionRequest) returns (SettlementInstructionResponse);
+  rpc GetHoldingSnapshot (HoldingSnapshotRequest) returns (HoldingSnapshotResponse);
+  rpc VerifyCustodyHealth (CustodyHealthRequest) returns (CustodyHealthResponse);
+}
+
+message SettlementInstructionRequest {
+  string instruction_id = 1;
+  string isin = 2;
+  int64 share_quantity = 3;
+  string trade_type = 4; // BUY / SELL
+  string depository = 5; // NSDL / CDSL
+  string settlement_date = 6;
+  string pool_account_id = 7;
+}
+
+message SettlementInstructionResponse {
+  string instruction_id = 1;
+  string depository_reference = 2;
+  string status = 3; // ACCEPTED / REJECTED / PENDING
+  string message = 4;
+  int64 timestamp = 5;
+}
+
+message HoldingSnapshotRequest {
+  string depository = 1;
+  string snapshot_date = 2;
+}
+
+message HoldingSnapshotResponse {
+  string snapshot_id = 1;
+  string depository = 2;
+  string merkle_root = 3;
+  int64 total_securities_count = 4;
+  repeated SecurityBalance balances = 5;
+  int64 generated_at = 6;
+}
+
+message SecurityBalance {
+  string isin = 1;
+  string symbol = 2;
+  int64 settled_quantity = 3;
+  int64 pledged_quantity = 4;
+  int64 in_transit_quantity = 5;
+}
+
+message CustodyHealthRequest {}
+message CustodyHealthResponse {
+  bool sftp_connected = 1;
+  bool hsm_healthy = 2;
+  bool depository_api_reachable = 3;
+  int64 last_sync_timestamp = 4;
+}

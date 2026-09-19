@@ -1,0 +1,164 @@
+syntax = "proto3";
+
+package growww.ingress.v1;
+
+option go_package = "growww/ingress/v1;ingressv1";
+
+service EvmIngressService {
+  rpc GetDepositStatus (GetDepositStatusRequest) returns (GetDepositStatusResponse);
+  rpc SubmitPermitDeposit (SubmitPermitDepositRequest) returns (SubmitPermitDepositResponse);
+  rpc EstimateBridgeFee (EstimateBridgeFeeRequest) returns (EstimateBridgeFeeResponse);
+  rpc InitiateCcipBridgeWithdrawal (InitiateCcipBridgeWithdrawalRequest) returns (InitiateCcipBridgeWithdrawalResponse);
+  rpc GetChainFinalityMetrics (GetChainFinalityMetricsRequest) returns (GetChainFinalityMetricsResponse);
+  rpc ListSupportedTokens (ListSupportedTokensRequest) returns (ListSupportedTokensResponse);
+}
+
+enum EvmChainId {
+  CHAIN_UNSPECIFIED = 0;
+  CHAIN_ETHEREUM_MAINNET = 1;
+  CHAIN_ARBITRUM_ONE = 42161;
+  CHAIN_OPTIMISM_MAINNET = 10;
+  CHAIN_BASE_MAINNET = 8453;
+  CHAIN_POLYGON_POS = 137;
+}
+
+enum TokenType {
+  TOKEN_UNSPECIFIED = 0;
+  TOKEN_ETH = 1;
+  TOKEN_USDC = 2;
+  TOKEN_USDT = 3;
+  TOKEN_DAI = 4;
+  TOKEN_WBTC = 5;
+}
+
+enum DepositState {
+  DEPOSIT_STATE_UNSPECIFIED = 0;
+  DEPOSIT_STATE_DETECTED = 1;
+  DEPOSIT_STATE_SAFE_CONFIRMED = 2;
+  DEPOSIT_STATE_FINALIZED = 3;
+  DEPOSIT_STATE_REORG_INVALIDATED = 4;
+  DEPOSIT_STATE_CREDITED = 5;
+  DEPOSIT_STATE_REJECTED_AML = 6;
+}
+
+enum CcipBridgeStatus {
+  CCIP_STATUS_UNSPECIFIED = 0;
+  CCIP_STATUS_PENDING_SUBMISSION = 1;
+  CCIP_STATUS_IN_FLIGHT = 2;
+  CCIP_STATUS_COMMITTED_ON_DESTINATION = 3;
+  CCIP_STATUS_EXECUTED_SUCCESS = 4;
+  CCIP_STATUS_FAILED = 5;
+}
+
+message GetDepositStatusRequest {
+  string deposit_id = 1;
+  string tx_hash = 2;
+  EvmChainId chain_id = 3;
+}
+
+message GetDepositStatusResponse {
+  string deposit_id = 1;
+  EvmChainId chain_id = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  string user_account_hash = 5;
+  TokenType token = 6;
+  string token_address = 7;
+  string raw_amount = 8;
+  string decimal_amount = 9;
+  uint64 block_number = 10;
+  uint64 confirmations = 11;
+  uint64 required_confirmations = 12;
+  DepositState state = 13;
+  int64 detected_at_unix_ms = 14;
+  int64 finalized_at_unix_ms = 15;
+}
+
+message SubmitPermitDepositRequest {
+  EvmChainId chain_id = 1;
+  string user_account_hash = 2;
+  TokenType token = 3;
+  string token_address = 4;
+  string owner_address = 5;
+  string amount = 6;
+  uint64 deadline = 7;
+  uint32 v = 8;
+  string r = 9; // Hex 32 bytes
+  string s = 10; // Hex 32 bytes
+  string idempotency_key = 11;
+}
+
+message SubmitPermitDepositResponse {
+  string deposit_id = 1;
+  string relayer_tx_hash = 2;
+  DepositState initial_state = 3;
+  int64 submitted_at_unix_ms = 4;
+}
+
+message EstimateBridgeFeeRequest {
+  EvmChainId source_chain_id = 1;
+  EvmChainId destination_chain_id = 2;
+  TokenType token = 3;
+  string amount = 4;
+  bool pay_in_link = 5;
+}
+
+message EstimateBridgeFeeResponse {
+  string fee_native_wei = 1;
+  string fee_link_juels = 2;
+  string estimated_duration_seconds = 3;
+  uint64 ccip_chain_selector = 4;
+}
+
+message InitiateCcipBridgeWithdrawalRequest {
+  string withdrawal_id = 1;
+  EvmChainId source_chain_id = 2;
+  EvmChainId destination_chain_id = 3;
+  TokenType token = 4;
+  string recipient_evm_address = 5;
+  string amount = 6;
+  bool pay_in_link = 7;
+  string idempotency_key = 8;
+}
+
+message InitiateCcipBridgeWithdrawalResponse {
+  string withdrawal_id = 1;
+  string ccip_message_id = 2;
+  string source_tx_hash = 3;
+  CcipBridgeStatus status = 4;
+  int64 dispatched_at_unix_ms = 5;
+}
+
+message GetChainFinalityMetricsRequest {
+  EvmChainId chain_id = 1;
+}
+
+message GetChainFinalityMetricsResponse {
+  EvmChainId chain_id = 1;
+  uint64 latest_block_number = 2;
+  uint64 safe_block_number = 3;
+  uint64 finalized_block_number = 4;
+  uint64 current_confirmation_threshold = 5;
+  uint64 reorg_depth_last_24h = 6;
+  bool rpc_healthy = 7;
+  int64 last_block_timestamp_unix_ms = 8;
+}
+
+message ListSupportedTokensRequest {
+  EvmChainId chain_id = 1;
+}
+
+message TokenInfo {
+  TokenType token = 1;
+  string symbol = 2;
+  string contract_address = 3;
+  uint32 decimals = 4;
+  bool permit_supported = 5;
+  string min_deposit_amount = 6;
+  string max_deposit_amount = 7;
+  bool is_active = 8;
+}
+
+message ListSupportedTokensResponse {
+  repeated TokenInfo tokens = 1;
+}

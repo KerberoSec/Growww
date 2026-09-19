@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package growww.risk.v1;
+
+option go_package = "growww/risk/v1;riskv1";
+
+service RiskService {
+  rpc EvaluateOrderRisk (EvaluateOrderRiskRequest) returns (EvaluateOrderRiskResponse);
+  rpc UpdateCircuitBreakers (UpdateCircuitBreakersRequest) returns (UpdateCircuitBreakersResponse);
+  rpc GetSymbolRiskStatus (GetSymbolRiskStatusRequest) returns (GetSymbolRiskStatusResponse);
+}
+
+enum RiskDecision {
+  RISK_DECISION_UNSPECIFIED = 0;
+  RISK_DECISION_APPROVED = 1;
+  RISK_DECISION_REJECTED = 2;
+}
+
+enum RiskRejectReason {
+  REJECT_REASON_NONE = 0;
+  REJECT_REASON_EXCHANGE_HALTED = 1;
+  REJECT_REASON_SYMBOL_HALTED = 2;
+  REJECT_REASON_CIRCUIT_BREAKER_VIOLATION = 3;
+  REJECT_REASON_MAX_ORDER_VALUE_EXCEEDED = 4;
+  REJECT_REASON_MAX_ORDER_QUANTITY_EXCEEDED = 5;
+  REJECT_REASON_DAILY_TURNOVER_LIMIT_EXCEEDED = 6;
+  REJECT_REASON_ORDER_VELOCITY_RATE_EXCEEDED = 7;
+  REJECT_REASON_FAT_FINGER_PRICE_DEVIATION = 8;
+  REJECT_REASON_COMPLIANCE_ADDRESS_FROZEN = 9;
+}
+
+message EvaluateOrderRiskRequest {
+  string order_id = 1;
+  string user_id = 2;
+  string ledger_address = 3;
+  string isin = 4;
+  string side = 5; // BUY, SELL
+  string order_type = 6; // LIMIT, MARKET
+  string price = 7; // Decimal string in INR
+  string quantity = 8; // Fractional decimal string
+}
+
+message EvaluateOrderRiskResponse {
+  string order_id = 1;
+  RiskDecision decision = 2;
+  RiskRejectReason reject_reason = 3;
+  string message = 4;
+  int64 evaluated_at_unix_ns = 5;
+}
+
+message UpdateCircuitBreakersRequest {
+  string isin = 1;
+  string lower_circuit_price = 2;
+  string upper_circuit_price = 3;
+  bool is_halted = 4;
+  string reason = 5;
+}
+
+message UpdateCircuitBreakersResponse {
+  bool success = 1;
+}
+
+message GetSymbolRiskStatusRequest {
+  string isin = 1;
+}
+
+message GetSymbolRiskStatusResponse {
+  string isin = 1;
+  string lower_circuit_price = 2;
+  string upper_circuit_price = 3;
+  bool is_halted = 4;
+  string max_order_quantity = 5;
+  string max_order_value = 6;
+}

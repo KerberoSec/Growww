@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package growww.desktop.v1;
+
+option go_package = "growww/packages/proto/growww/desktop/v1;desktopv1";
+
+enum WindowType {
+  WINDOW_TYPE_UNSPECIFIED = 0;
+  WINDOW_TYPE_MASTER_SHELL = 1;
+  WINDOW_TYPE_ORDER_BOOK = 2;
+  WINDOW_TYPE_DEPTH_LADDER_DOM = 3;
+  WINDOW_TYPE_TRADINGVIEW_CHART = 4;
+  WINDOW_TYPE_EXECUTION_BLOTTER = 5;
+  WINDOW_TYPE_WATCHLIST = 6;
+  WINDOW_TYPE_SETTLEMENT_MONITOR = 7;
+}
+
+message WindowGeometry {
+  string window_id = 1;
+  WindowType window_type = 2;
+  int32 screen_id = 3;
+  double x = 4;
+  double y = 5;
+  double width = 6;
+  double height = 7;
+  bool is_maximized = 8;
+  bool is_docked = 9;
+  string link_group = 10; // e.g. "group_red", "group_blue"
+  string active_symbol = 11;
+}
+
+message WorkspaceLayout {
+  string layout_id = 1;
+  string user_id = 2;
+  string layout_name = 3; // "Day Trader", "Scalper", "4K Multi-Monitor"
+  repeated WindowGeometry windows = 4;
+  map<string, string> hotkey_bindings = 5; // e.g. "Shift+B": "BUY_MARKET", "Escape": "CANCEL_ALL"
+  int64 updated_at_ms = 6;
+}
+
+message SaveWorkspaceLayoutRequest {
+  string request_id = 1;
+  WorkspaceLayout layout = 2;
+}
+
+message SaveWorkspaceLayoutResponse {
+  string request_id = 1;
+  bool success = 2;
+  string layout_id = 3;
+  int64 updated_at_ms = 4;
+  string error_message = 5;
+}
+
+message GetWorkspaceLayoutRequest {
+  string request_id = 1;
+  string user_id = 2;
+  string layout_id = 3;
+}
+
+message GetWorkspaceLayoutResponse {
+  string request_id = 1;
+  WorkspaceLayout layout = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+service DesktopWorkspaceService {
+  rpc SaveWorkspaceLayout(SaveWorkspaceLayoutRequest) returns (SaveWorkspaceLayoutResponse);
+  rpc GetWorkspaceLayout(GetWorkspaceLayoutRequest) returns (GetWorkspaceLayoutResponse);
+}

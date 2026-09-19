@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package growww.rfq.v1;
+
+option go_package = "growww/rfq/v1;rfqv1";
+
+// The RFQ Service provides guaranteed-rate conversion and instant swaps.
+service RFQService {
+  // Request a binding, guaranteed-rate quote locked for 5.00 seconds.
+  rpc RequestQuote (RequestQuoteRequest) returns (RequestQuoteResponse);
+
+  // Execute a previously locked quote within its valid 5-second window.
+  rpc ExecuteQuote (ExecuteQuoteRequest) returns (ExecuteQuoteResponse);
+
+  // Stream continuous indicative conversion prices and countdown timers.
+  rpc GetQuoteStream (GetQuoteStreamRequest) returns (stream QuoteStreamUpdate);
+
+  // Query status and audit details of a specific quote.
+  rpc GetQuoteStatus (GetQuoteStatusRequest) returns (GetQuoteStatusResponse);
+
+  // List past swap conversion executions for a specific user.
+  rpc ListSwapHistory (ListSwapHistoryRequest) returns (ListSwapHistoryResponse);
+}
+
+enum AssetType {
+  ASSET_TYPE_UNSPECIFIED = 0;
+  ASSET_TYPE_FIAT_INR = 1;
+  ASSET_TYPE_CBDC_EINR = 2;
+  ASSET_TYPE_STABLECOIN_USDT = 3;
+  ASSET_TYPE_TOKENIZED_SECURITY = 4;
+}
+
+enum QuoteStatus {
+  QUOTE_STATUS_UNSPECIFIED = 0;
+  QUOTE_STATUS_LOCKED = 1;     // Active and executable within 5-second lock
+  QUOTE_STATUS_EXECUTING = 2;  // Claimed and settlement in-progress
+  QUOTE_STATUS_COMPLETED = 3;  // Successfully settled with zero slippage
+  QUOTE_STATUS_EXPIRED = 4;    // 5-second window elapsed without execution
+  QUOTE_STATUS_REJECTED = 5;   // Rejected due to risk checks or insufficient liquidity
+  QUOTE_STATUS_FAILED = 6;     // Settlement execution aborted and rolled back
+}
+
+message RequestQuoteRequest {
+  string user_id = 1;
+  string idempotency_key = 2;
+  string from_asset = 3;             // e.g., "INR", "EINR", "USDT", "INE002A01018"
+  AssetType from_asset_type = 4;
+  string to_asset = 5;               // e.g., "INE002A01018", "USDT", "INR"
+  AssetType to_asset_type = 6;
+  string from_amount = 7;            // Exact amount user wishes to swap
+  bool is_exact_out = 8;             // If true, to_amount is fixed and from_amount is calculated
+}
+
+message RequestQuoteResponse {
+  string quote_id = 1;
+  string user_id = 2;
+  string from_asset = 3;
+  string to_asset = 4;
+  string from_amount = 5;
+  string to_amount = 6;              // Guaranteed payout amount received
+  string guaranteed_rate = 7;        // Exact conversion multiplier
+  string platform_fee_amount = 8;    // Universal 0.00% Zero-Fee Invariant (No fee at all) in source asset
+  string platform_fee_bps = 9;       // Always "0.00" (0.00% Zero-Fee at launch)
+  int64 valid_duration_ms = 10;      // Exactly 5000 (5 seconds)
+  int64 issued_at_unix_ms = 11;
+  int64 expires_at_unix_ms = 12;
+  string quote_signature = 13;       // HMAC-SHA256 signature verifying quote integrity
+  QuoteStatus status = 14;
+}
+
+message ExecuteQuoteRequest {
+  string quote_id = 1;
+  string user_id = 2;
+  string quote_signature = 3;        // Validated against server secret
+  string idempotency_key = 4;
+  int64 client_submitted_at_unix_ms = 5;
+}
+
+message ExecuteQuoteResponse {
+  string swap_id = 1;
+  string quote_id = 2;
+  string user_id = 3;
+  QuoteStatus status = 4;
+  string from_asset = 5;
+  string to_asset = 6;
+  string from_amount_debited = 7;
+  string to_amount_credited = 8;
+  string fee_debited = 9;
+  string effective_rate = 10;        // Exactly matches guaranteed_rate (zero slippage)
+  string on_chain_tx_hash = 11;      // Besu transaction hash for DvP swaps (if applicable)
+  int64 executed_at_unix_ms = 12;
+}
+
+message GetQuoteStreamRequest {
+  string user_id = 1;
+  string from_asset = 2;
+  string to_asset = 3;
+  string indicative_amount = 4;
+}
+
+message QuoteStreamUpdate {
+  string from_asset = 1;
+  string to_asset = 2;
+  string indicative_rate = 3;
+  string estimated_payout = 4;
+  string estimated_fee = 5;
+  int64 server_time_unix_ms = 6;
+}
+
+message GetQuoteStatusRequest {
+  string quote_id = 1;
+  string user_id = 2;
+}
+
+message GetQuoteStatusResponse {
+  string quote_id = 1;
+  QuoteStatus status = 2;
+  int64 time_remaining_ms = 3;
+  RequestQuoteResponse quote_details = 4;
+}
+
+message ListSwapHistoryRequest {
+  string user_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListSwapHistoryResponse {
+  repeated ExecuteQuoteResponse swaps = 1;
+  string next_page_token = 2;
+}

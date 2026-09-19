@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package growww.perpetuals.v1;
+
+option go_package = "growww/perpetuals/v1;perpetualsv1";
+
+service PerpetualsEngineService {
+  rpc SubmitOrder (SubmitDerivativeOrderRequest) returns (SubmitDerivativeOrderResponse);
+  rpc CancelOrder (CancelDerivativeOrderRequest) returns (CancelDerivativeOrderResponse);
+  rpc GetPosition (GetPositionRequest) returns (GetPositionResponse);
+  rpc GetMarketSummary (GetMarketSummaryRequest) returns (GetMarketSummaryResponse);
+  rpc UpdateOraclePrice (UpdateOraclePriceRequest) returns (UpdateOraclePriceResponse);
+  rpc TriggerEmergencyHalt (EmergencyHaltRequest) returns (EmergencyHaltResponse);
+}
+
+enum DerivativeAssetType {
+  DERIVATIVE_ASSET_TYPE_UNSPECIFIED = 0;
+  DERIVATIVE_ASSET_TYPE_PERPETUAL_FUTURE = 1;
+  DERIVATIVE_ASSET_TYPE_SYNTHETIC_EQUITY = 2;
+  DERIVATIVE_ASSET_TYPE_COMMODITY = 3;
+}
+
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+enum OrderExecutionType {
+  ORDER_EXECUTION_TYPE_UNSPECIFIED = 0;
+  ORDER_EXECUTION_TYPE_LIMIT = 1;
+  ORDER_EXECUTION_TYPE_MARKET = 2;
+  ORDER_EXECUTION_TYPE_POST_ONLY = 3;
+  ORDER_EXECUTION_TYPE_IOC = 4;
+  ORDER_EXECUTION_TYPE_FOK = 5;
+}
+
+enum ExecutionVenue {
+  EXECUTION_VENUE_UNSPECIFIED = 0;
+  EXECUTION_VENUE_CLOB = 1;
+  EXECUTION_VENUE_VAMM = 2;
+  EXECUTION_VENUE_HYBRID = 3;
+}
+
+message SubmitDerivativeOrderRequest {
+  string order_id = 1;
+  string account_id = 2;
+  string market_symbol = 3;
+  DerivativeAssetType asset_type = 4;
+  OrderSide side = 5;
+  OrderExecutionType execution_type = 6;
+  uint64 price_e8 = 7;
+  uint64 quantity_e8 = 8;
+  uint32 requested_leverage = 9;
+  bool is_reduce_only = 10;
+  int64 client_timestamp_ns = 11;
+}
+
+message SubmitDerivativeOrderResponse {
+  bool accepted = 1;
+  string order_id = 2;
+  string rejection_reason = 3;
+  uint64 sequence_number = 4;
+  int64 processed_at_ns = 5;
+}
+
+message CancelDerivativeOrderRequest {
+  string order_id = 1;
+  string account_id = 2;
+  string market_symbol = 3;
+}
+
+message CancelDerivativeOrderResponse {
+  bool success = 1;
+  string order_id = 2;
+  string error_message = 3;
+}
+
+message GetPositionRequest {
+  string account_id = 1;
+  string market_symbol = 2;
+}
+
+message PositionDto {
+  string account_id = 1;
+  string market_symbol = 2;
+  OrderSide side = 3;
+  uint64 size_e8 = 4;
+  uint64 entry_price_e8 = 5;
+  uint64 mark_price_e8 = 6;
+  uint64 liquidation_price_e8 = 7;
+  uint64 collateral_amount_e18 = 8;
+  uint32 effective_leverage = 9;
+  int64 unrealized_pnl_e18 = 10;
+  int64 cumulative_funding_e18 = 11;
+  uint32 adl_quantile = 12;
+  int64 updated_at_ns = 13;
+}
+
+message GetPositionResponse {
+  PositionDto position = 1;
+}
+
+message GetMarketSummaryRequest {
+  string market_symbol = 1;
+}
+
+message GetMarketSummaryResponse {
+  string market_symbol = 1;
+  uint64 index_price_e8 = 2;
+  uint64 mark_price_e8 = 3;
+  int64 funding_rate_e8 = 4;
+  int64 next_funding_timestamp_ns = 5;
+  uint64 open_interest_long_e8 = 6;
+  uint64 open_interest_short_e8 = 7;
+  uint64 insurance_fund_balance_e18 = 8;
+  uint64 vamm_reserve_base_e8 = 9;
+  uint64 vamm_reserve_quote_e18 = 10;
+  int64 last_match_timestamp_ns = 11;
+}
+
+message UpdateOraclePriceRequest {
+  string market_symbol = 1;
+  string oracle_source = 2;
+  uint64 spot_price_e8 = 3;
+  uint64 confidence_interval_e8 = 4;
+  int64 oracle_timestamp_ns = 5;
+}
+
+message UpdateOraclePriceResponse {
+  bool accepted = 1;
+  uint64 consolidated_index_price_e8 = 2;
+  uint64 derived_mark_price_e8 = 3;
+}
+
+message EmergencyHaltRequest {
+  string market_symbol = 1;
+  string reason = 2;
+  string operator_signature = 3;
+}
+
+message EmergencyHaltResponse {
+  bool halted = 1;
+  int64 halted_at_ns = 2;
+}

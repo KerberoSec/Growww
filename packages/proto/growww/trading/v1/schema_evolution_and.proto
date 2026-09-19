@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package growww.trading.v1;
+
+option go_package = "github.com/growww/proto/gen/go/trading/v1;tradingv1";
+option java_package = "com.growww.proto.trading.v1";
+
+import "google/protobuf/timestamp.proto";
+import "proto/common/v1/money.proto";
+
+// OrderPlacedEvent represents an order successfully matched and accepted.
+// Wire Protocol Invariant: Tags 1 through 10 are frozen in v1.
+message OrderPlacedEvent {
+  // RESERVED: Tags and field names of retired fields to prevent accidental reassignment.
+  reserved 4, 11 to 15;
+  reserved "broker_sub_account_code", "legacy_terminal_id";
+
+  // Tag 1: Permanent Order Identifier (UUIDv7 string)
+  string order_id = 1;
+
+  // Tag 2: Authenticated Investor Identifier
+  string user_id = 2;
+
+  // Tag 3: Security ISIN identifier (e.g., "INE002A01018")
+  string security_isin = 3;
+
+  // Tag 5: Total order quantity (Fixed-point 6 decimals as string or integer units)
+  int64 quantity_micros = 5;
+
+  // Tag 6: Limit price representation (safe money object)
+  growww.common.v1.Money limit_price = 6;
+
+  // Tag 7: Order Type enumeration
+  OrderType order_type = 7;
+
+  // Tag 8: Time In Force enumeration
+  TimeInForce time_in_force = 8;
+
+  // Tag 9: Timestamp of acceptance
+  google.protobuf.Timestamp placed_at = 9;
+
+  // Tag 10: DEPRECATED field. Use execution_venue instead.
+  // Marked deprecated; consumers must transition before Phase 4 removal.
+  string routing_desk_id = 10 [deprecated = true];
+
+  // Tag 16: ADDED in v1.1.0 - Zero-downtime backward-compatible expansion.
+  // Wire compatible: scalar string defaults to empty string in older consumers.
+  string execution_venue = 16;
+
+  // Tag 17: ADDED in v1.2.0 - Optional institutional algorithmic routing parameters.
+  optional AlgorithmicRoutingParams algo_params = 17;
+}
+
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  ORDER_TYPE_LIMIT = 1;
+  ORDER_TYPE_MARKET = 2;
+  ORDER_TYPE_STOP_LIMIT = 3;
+}
+
+enum TimeInForce {
+  TIME_IN_FORCE_UNSPECIFIED = 0;
+  TIME_IN_FORCE_DAY = 1;
+  TIME_IN_FORCE_IOC = 2; // Immediate or Cancel
+  TIME_IN_FORCE_GTC = 3; // Good 'Til Cancelled
+}
+
+message AlgorithmicRoutingParams {
+  string algorithm_name = 1;
+  int32 max_participation_rate_bps = 2;
+}

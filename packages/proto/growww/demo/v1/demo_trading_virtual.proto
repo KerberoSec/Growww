@@ -1,0 +1,213 @@
+syntax = "proto3";
+
+package growww.demo.v1;
+
+option go_package = "growww/demo/v1;demov1";
+
+// DemoOrderService provides virtual / paper trading matching and execution.
+service DemoOrderService {
+  // Place a new virtual order against live market prices.
+  rpc PlaceDemoOrder (PlaceDemoOrderRequest) returns (PlaceDemoOrderResponse);
+
+  // Cancel an active virtual order.
+  rpc CancelDemoOrder (CancelDemoOrderRequest) returns (CancelDemoOrderResponse);
+
+  // Replace or modify an active virtual order (price or quantity).
+  rpc ReplaceDemoOrder (ReplaceDemoOrderRequest) returns (ReplaceDemoOrderResponse);
+
+  // Retrieve details of a specific virtual order.
+  rpc GetDemoOrder (GetDemoOrderRequest) returns (GetDemoOrderResponse);
+
+  // List all active or historical virtual orders for a demo account.
+  rpc ListActiveDemoOrders (ListActiveDemoOrdersRequest) returns (ListActiveDemoOrdersResponse);
+
+  // Stream real-time order lifecycle events and fill notifications.
+  rpc StreamDemoOrders (StreamDemoOrdersRequest) returns (stream DemoOrderEvent);
+
+  // Stream synthetic Level-2 order book depth for the demo environment.
+  rpc StreamDemoL2Depth (StreamDemoL2DepthRequest) returns (stream DemoL2DepthSnapshot);
+
+  // Reset a demo account balance and purge active virtual positions.
+  rpc ResetDemoAccount (ResetDemoAccountRequest) returns (ResetDemoAccountResponse);
+}
+
+enum DemoOrderSide {
+  DEMO_ORDER_SIDE_UNSPECIFIED = 0;
+  DEMO_ORDER_SIDE_BUY = 1;
+  DEMO_ORDER_SIDE_SELL = 2;
+}
+
+enum DemoOrderType {
+  DEMO_ORDER_TYPE_UNSPECIFIED = 0;
+  DEMO_ORDER_TYPE_LIMIT = 1;
+  DEMO_ORDER_TYPE_MARKET = 2;
+  DEMO_ORDER_TYPE_STOP_LOSS = 3;
+  DEMO_ORDER_TYPE_STOP_LIMIT = 4;
+  DEMO_ORDER_TYPE_TAKE_PROFIT = 5;
+  DEMO_ORDER_TYPE_TAKE_PROFIT_LIMIT = 6;
+}
+
+enum DemoTimeInForce {
+  DEMO_TIME_IN_FORCE_UNSPECIFIED = 0;
+  DEMO_TIME_IN_FORCE_GTC = 1; // Good 'Til Cancelled
+  DEMO_TIME_IN_FORCE_IOC = 2; // Immediate Or Cancel
+  DEMO_TIME_IN_FORCE_FOK = 3; // Fill Or Kill
+}
+
+enum DemoOrderStatus {
+  DEMO_ORDER_STATUS_UNSPECIFIED = 0;
+  DEMO_ORDER_STATUS_PENDING = 1;
+  DEMO_ORDER_STATUS_OPEN = 2;
+  DEMO_ORDER_STATUS_PARTIALLY_FILLED = 3;
+  DEMO_ORDER_STATUS_FILLED = 4;
+  DEMO_ORDER_STATUS_CANCELLED = 5;
+  DEMO_ORDER_STATUS_REJECTED = 6;
+  DEMO_ORDER_STATUS_EXPIRED = 7;
+}
+
+message PlaceDemoOrderRequest {
+  string demo_account_id = 1;
+  string symbol = 2;                  // e.g., "BTC-USDT", "ETH-USDT"
+  DemoOrderSide side = 3;
+  DemoOrderType order_type = 4;
+  DemoTimeInForce time_in_force = 5;
+  string quantity = 6;                // Fixed-point string (e.g., "0.50000000")
+  string price = 7;                   // Optional for market orders (e.g., "65250.500000")
+  string trigger_price = 8;           // Required for stop/take-profit orders
+  string idempotency_key = 9;
+  string slippage_model_id = 10;      // Optional override for simulation profile
+}
+
+message PlaceDemoOrderResponse {
+  string demo_order_id = 1;
+  string demo_account_id = 2;
+  string symbol = 3;
+  DemoOrderStatus status = 4;
+  string original_quantity = 5;
+  string executed_quantity = 6;
+  string cumulative_quote_value = 7;
+  string average_fill_price = 8;
+  string estimated_slippage_bps = 9;
+  int64 created_at_unix_ms = 10;
+}
+
+message CancelDemoOrderRequest {
+  string demo_order_id = 1;
+  string demo_account_id = 2;
+  string symbol = 3;
+}
+
+message CancelDemoOrderResponse {
+  string demo_order_id = 1;
+  DemoOrderStatus status = 2;
+  string unexecuted_quantity = 3;
+  int64 cancelled_at_unix_ms = 4;
+}
+
+message ReplaceDemoOrderRequest {
+  string demo_order_id = 1;
+  string demo_account_id = 2;
+  string symbol = 3;
+  string new_price = 4;
+  string new_quantity = 5;
+  string idempotency_key = 6;
+}
+
+message ReplaceDemoOrderResponse {
+  string new_demo_order_id = 1;
+  string previous_demo_order_id = 2;
+  DemoOrderStatus status = 3;
+  string updated_price = 4;
+  string updated_quantity = 5;
+  int64 updated_at_unix_ms = 6;
+}
+
+message GetDemoOrderRequest {
+  string demo_order_id = 1;
+  string demo_account_id = 2;
+}
+
+message GetDemoOrderResponse {
+  DemoOrderDetail order = 1;
+}
+
+message ListActiveDemoOrdersRequest {
+  string demo_account_id = 1;
+  string symbol = 2;                  // Optional filter
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListActiveDemoOrdersResponse {
+  repeated DemoOrderDetail orders = 1;
+  string next_page_token = 2;
+}
+
+message DemoOrderDetail {
+  string demo_order_id = 1;
+  string demo_account_id = 2;
+  string symbol = 3;
+  DemoOrderSide side = 4;
+  DemoOrderType order_type = 5;
+  DemoTimeInForce time_in_force = 6;
+  DemoOrderStatus status = 7;
+  string original_quantity = 8;
+  string executed_quantity = 9;
+  string remaining_quantity = 10;
+  string limit_price = 11;
+  string trigger_price = 12;
+  string average_fill_price = 13;
+  string virtual_fee_debited = 14;
+  int64 created_at_unix_ms = 15;
+  int64 updated_at_unix_ms = 16;
+}
+
+message StreamDemoOrdersRequest {
+  string demo_account_id = 1;
+}
+
+message DemoOrderEvent {
+  string event_id = 1;
+  string demo_order_id = 2;
+  string demo_account_id = 3;
+  string symbol = 4;
+  DemoOrderStatus status = 5;
+  string fill_quantity = 6;
+  string fill_price = 7;
+  string virtual_fee = 8;
+  string slippage_bps = 9;
+  string on_chain_tx_hash = 10;       // Besu Testnet receipt hash
+  int64 event_time_unix_ms = 11;
+}
+
+message StreamDemoL2DepthRequest {
+  string symbol = 1;
+  int32 depth_levels = 2;             // e.g., 20 or 50
+}
+
+message DepthLevel {
+  string price = 1;
+  string quantity = 2;
+  int32 order_count = 3;
+}
+
+message DemoL2DepthSnapshot {
+  string symbol = 1;
+  repeated DepthLevel bids = 2;
+  repeated DepthLevel asks = 3;
+  int64 sequence_number = 4;
+  int64 timestamp_unix_ms = 5;
+}
+
+message ResetDemoAccountRequest {
+  string demo_account_id = 1;
+  string initial_virtual_usdt = 2;   // e.g., "100000.000000"
+}
+
+message ResetDemoAccountResponse {
+  string demo_account_id = 1;
+  bool success = 2;
+  string reset_balance_usdt = 3;
+  int32 cancelled_orders_count = 4;
+  int64 reset_at_unix_ms = 5;
+}

@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package growww.reconciliation.v1;
+
+option go_package = "github.com/growww/services/reconciliation-engine/gen/v1;reconciliationv1";
+
+service ReconciliationService {
+  rpc TriggerManualReconciliation (ReconciliationRequest) returns (ReconciliationResponse);
+  rpc GetReconciliationStatus (ReconciliationStatusRequest) returns (ReconciliationStatusResponse);
+  rpc GetDiscrepancyReport (DiscrepancyReportRequest) returns (DiscrepancyReportResponse);
+  rpc ResolveDiscrepancy (ResolveDiscrepancyRequest) returns (ResolveDiscrepancyResponse);
+}
+
+message ReconciliationRequest {
+  string recon_type = 1; // ASSET_3WAY / FIAT_ESCROW / PROOF_OF_RESERVE
+  string target_date = 2; // YYYY-MM-DD
+  string isin_filter = 3; // Optional ISIN
+}
+
+message ReconciliationResponse {
+  string run_id = 1;
+  string status = 2; // STARTED / QUEUED
+  int64 triggered_at = 3;
+}
+
+message ReconciliationStatusRequest {
+  string run_id = 1;
+}
+
+message ReconciliationStatusResponse {
+  string run_id = 1;
+  string status = 2; // IN_PROGRESS / COMPLETED / DISCREPANCY_DETECTED / FAILED
+  int64 total_records_checked = 3;
+  int64 total_discrepancies = 4;
+  string execution_time_ms = 5;
+  int64 completed_at = 6;
+}
+
+message DiscrepancyReportRequest {
+  string run_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message DiscrepancyReportResponse {
+  string run_id = 1;
+  repeated DiscrepancyItem items = 2;
+  string next_page_token = 3;
+}
+
+message DiscrepancyItem {
+  string discrepancy_id = 1;
+  string isin = 2;
+  string account_identifier = 3;
+  string custody_balance = 4;
+  string database_balance = 5;
+  string on_chain_balance = 6;
+  string variance_amount = 7;
+  string severity = 8; // CRITICAL / WARNING
+  string status = 9; // OPEN / RESOLVED / ESCALATED
+  int64 detected_at = 10;
+}
+
+message ResolveDiscrepancyRequest {
+  string discrepancy_id = 1;
+  string resolution_notes = 2;
+  string resolved_by_officer_id = 3;
+}
+
+message ResolveDiscrepancyResponse {
+  string discrepancy_id = 1;
+  bool success = 2;
+  int64 resolved_at = 3;
+}

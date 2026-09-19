@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package growww.mm.v1;
+
+option go_package = "growww/mm/v1;mmv1";
+
+service MMIncentiveService {
+  rpc GetDMMPerformanceReport (GetDMMPerformanceReportRequest) returns (MMPerformanceReport);
+  rpc QueryEpochEvaluation (QueryEpochEvaluationRequest) returns (EpochEvaluationResult);
+  rpc UpdateDMMTierConfig (UpdateDMMTierConfigRequest) returns (UpdateDMMTierConfigResponse);
+  rpc TriggerManualRebateSettlement (TriggerManualRebateSettlementRequest) returns (RebateDisbursementInstruction);
+}
+
+enum DMMComplianceTier {
+  DMM_COMPLIANCE_TIER_UNSPECIFIED = 0;
+  DMM_COMPLIANCE_TIER_DIAMOND = 1;    // >= 98% Uptime, <= 10 bps Spread, >= 15L Depth
+  DMM_COMPLIANCE_TIER_GOLD = 2;       // >= 95% Uptime, <= 20 bps Spread, >= 10L Depth
+  DMM_COMPLIANCE_TIER_SILVER = 3;     // >= 90% Uptime, <= 30 bps Spread, >= 5L Depth
+  DMM_COMPLIANCE_TIER_DISQUALIFIED = 4; // < 90% Uptime or Surveillance Breach
+}
+
+message DMMTierConfig {
+  string config_id = 1;
+  string asset_class = 2; // EQUITY_LARGE_CAP, EQUITY_MID_CAP, COMMODITY, DERIVATIVE
+  uint32 min_uptime_basis_points = 3; // e.g. 9500 for 95.00%
+  uint32 max_spread_basis_points = 4; // e.g. 15 for 0.15%
+  string min_notional_depth_inr = 5;  // e.g. "1000000.0000"
+  int64 maker_rebate_basis_points = 6; // e.g. -2 for -0.02% (negative fee) or 100 for 100% reimbursement
+  string treasury_subsidy_weight = 7; // Fractional share of epoch pool (e.g. "0.40")
+  uint32 max_order_to_trade_ratio = 8; // e.g. 50 (max 50 order actions per trade)
+}
+
+message MMPerformanceReport {
+  string report_id = 1;
+  string dmm_id = 2;
+  string isin = 3;
+  string epoch_id = 4;
+  int64 epoch_start_unix_ms = 5;
+  int64 epoch_end_unix_ms = 6;
+  
+  // Quantitative Compliance Metrics
+  double uptime_percentage = 7;         // Actual compliant uptime (e.g. 96.45%)
+  double time_weighted_avg_spread_bps = 8; // TWAS across epoch
+  string avg_two_sided_depth_inr = 9;   // Average resting two-sided depth
+  uint32 total_samples = 10;
+  uint32 compliant_samples = 11;
+  
+  // Surveillance & Anti-Gaming Metrics
+  uint32 order_to_trade_ratio = 12;
+  uint32 sub_50ms_cancellation_count = 13;
+  bool spoofing_flagged = 14;
+  
+  // Tier & Rebate Accounting
+  DMMComplianceTier achieved_tier = 15;
+  string gross_maker_volume_inr = 16;
+  string maker_fee_rebate_inr = 17;
+  string treasury_subsidy_inr = 18;
+  string total_rebate_payable_inr = 19;
+  string computation_proof_hash = 20; // SHA-256 Merkle leaf
+}
+
+message GetDMMPerformanceReportRequest {
+  string dmm_id = 1;
+  string isin = 2;
+  string epoch_id = 3;
+}
+
+message QueryEpochEvaluationRequest {
+  string epoch_id = 1;
+}
+
+message EpochEvaluationResult {
+  string epoch_id = 1;
+  int64 evaluated_at_unix = 2;
+  repeated MMPerformanceReport reports = 3;
+  string total_treasury_pool_distributed_inr = 4;
+  string on_chain_merkle_root = 5;
+}
+
+message UpdateDMMTierConfigRequest {
+  string admin_user_id = 1;
+  string maker_approval_token = 2;
+  DMMTierConfig config = 3;
+}
+
+message UpdateDMMTierConfigResponse {
+  bool success = 1;
+  string config_id = 2;
+  int64 updated_at_unix = 3;
+}
+
+message TriggerManualRebateSettlementRequest {
+  string epoch_id = 1;
+  string admin_user_id = 2;
+  string checker_approval_token = 3;
+}
+
+message RebateDisbursementInstruction {
+  string instruction_id = 1;
+  string epoch_id = 2;
+  string dmm_id = 3;
+  string dmm_wallet_address = 4;
+  string amount_inr = 5;
+  string off_chain_journal_id = 6;
+  string on_chain_tx_hash = 7;
+  string status = 8; // PENDING, DISPATCHED, CONFIRMED, FAILED
+}

@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package growww.margin.v1;
+
+option go_package = "github.com/growww/proto/gen/go/margin/v1;marginv1";
+
+enum AssetClass {
+  ASSET_CLASS_UNSPECIFIED = 0;
+  ASSET_CLASS_SPOT_EQUITY = 1;
+  ASSET_CLASS_BULLION_WARRANT = 2;
+  ASSET_CLASS_EQUITY_OPTION = 3;
+  ASSET_CLASS_PERPETUAL_SYNTHETIC = 4;
+  ASSET_CLASS_GSEC_SOVEREIGN_DEBT = 5;
+  ASSET_CLASS_CASH_FIAT = 6;
+}
+
+enum CollateralTier {
+  COLLATERAL_TIER_UNSPECIFIED = 0;
+  COLLATERAL_TIER_CASH_AND_EQUIVALENT = 1; // Cash INR, T-Bills, G-Secs < 1Y
+  COLLATERAL_TIER_SOVEREIGN_DEBT = 2;      // G-Secs > 1Y, SDLs
+  COLLATERAL_TIER_BULLION = 3;             // Gold/Silver 999 Vault Warrants
+  COLLATERAL_TIER_BLUE_CHIP_EQUITY = 4;    // Group 1 Equities (Haircut <= 20%)
+  COLLATERAL_TIER_MIDCAP_EQUITY = 5;       // Group 2 Equities (Haircut <= 40%)
+}
+
+message PositionItem {
+  string isin = 1;
+  AssetClass asset_class = 2;
+  int64 quantity = 3;                     // Positive for long, negative for short
+  uint64 mark_price_paise = 4;            // 10000 = INR 100.00
+  int64 delta_e4 = 5;                     // Delta scaled by 10^4
+  int64 gamma_e6 = 6;                     // Gamma scaled by 10^6
+  int64 vega_paise = 7;                   // Vega in paise
+  int64 dv01_paise = 8;                   // Interest rate DV01 in paise
+}
+
+message CollateralInventoryItem {
+  string asset_id = 1;
+  string isin = 2;
+  AssetClass asset_class = 3;
+  CollateralTier tier = 4;
+  uint64 available_quantity = 5;
+  uint64 already_pledged_quantity = 6;
+  uint64 unit_price_paise = 7;
+  uint32 haircut_bps = 8;                 // e.g. 1500 = 15.00%
+  uint32 annualized_yield_bps = 9;        // e.g. 715 = 7.15% (for G-Secs/T-Bills)
+  uint32 opportunity_cost_bps = 10;       // Cash drag / funding rate
+}
+
+message CrossMarginEvaluationRequest {
+  string account_id = 1;
+  repeated PositionItem positions = 2;
+  repeated CollateralInventoryItem collateral_inventory = 3;
+  bool include_optimization_plan = 4;
+}
+
+message SpreadOffsetCredit {
+  string leg_a_isin = 1;
+  string leg_b_isin = 2;
+  uint64 matched_delta_units = 3;
+  uint64 credit_amount_paise = 4;
+  uint32 correlation_bps = 5;
+}
+
+message CollateralPledgeInstruction {
+  string isin = 1;
+  AssetClass asset_class = 2;
+  uint64 pledge_quantity = 3;
+  uint64 gross_value_paise = 4;
+  uint64 haircut_value_paise = 5;
+  uint64 effective_collateral_paise = 6;
+}
+
+message CrossMarginFeeBreakdown {
+  uint64 gross_turnover_paise = 1;
+  uint64 platform_fee_paise = 2;          // 0.00% (No fee at all)
+  uint64 treasury_share_paise = 3;        // Governed by FeeController (0.00% at launch)
+  uint64 core_sgf_share_paise = 4;        // Governed by FeeController (0.00% at launch)
+  uint64 ipf_share_paise = 5;             // Governed by FeeController (0.00% at launch)
+}
+
+message CrossMarginEvaluationResponse {
+  string account_id = 1;
+  uint64 portfolio_notional_paise = 2;
+  uint64 parametric_var_paise = 3;
+  uint64 gross_elm_paise = 4;
+  uint64 net_elm_paise = 5;
+  uint64 total_spread_credits_paise = 6;
+  uint64 initial_margin_required_paise = 7;
+  uint64 maintenance_margin_required_paise = 8;
+  uint64 effective_collateral_available_paise = 9;
+  uint64 cash_equivalent_collateral_paise = 10;
+  bool is_50_50_cash_rule_satisfied = 11;
+  int64 margin_surplus_deficit_paise = 12;
+  repeated SpreadOffsetCredit spread_credits = 13;
+  repeated CollateralPledgeInstruction recommended_pledges = 14;
+  CrossMarginFeeBreakdown fee_breakdown = 15;
+  uint32 evaluation_duration_micros = 16;
+  int64 evaluated_at_ns = 17;
+}
+
+message PreTradeMarginDeltaRequest {
+  string account_id = 1;
+  PositionItem incremental_order = 2;
+}
+
+message PreTradeMarginDeltaResponse {
+  string account_id = 1;
+  bool is_margin_sufficient = 2;
+  int64 initial_margin_delta_paise = 3;
+  uint64 new_total_margin_required_paise = 4;
+  int64 remaining_margin_surplus_paise = 5;
+  uint32 evaluation_duration_micros = 6;
+}
+
+service CollateralOptimizerService {
+  rpc EvaluateCrossMargin (CrossMarginEvaluationRequest) returns (CrossMarginEvaluationResponse);
+  rpc CheckPreTradeMarginDelta (PreTradeMarginDeltaRequest) returns (PreTradeMarginDeltaResponse);
+  rpc OptimizeCollateralAllocation (CrossMarginEvaluationRequest) returns (CrossMarginEvaluationResponse);
+}

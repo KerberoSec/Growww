@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package growww.darkpool.v1;
+
+option go_package = "growww/darkpool/v1;darkpoolv1";
+
+service DarkPoolService {
+  rpc SubmitDarkOrder (SubmitDarkOrderRequest) returns (SubmitDarkOrderResponse);
+  rpc CancelDarkOrder (CancelDarkOrderRequest) returns (CancelDarkOrderResponse);
+  rpc GetDarkOrderStatus (GetDarkOrderStatusRequest) returns (GetDarkOrderStatusResponse);
+}
+
+enum DarkCrossMode {
+  DARK_CROSS_CONTINUOUS_MIDPOINT = 0;
+  DARK_CROSS_DISCRETE_BATCH_AUCTION = 1;
+}
+
+enum LiquidityTier {
+  TIER_INSTITUTIONAL = 0;
+  TIER_MARKET_MAKER = 1;
+  TIER_SYSTEMATIC_INTERNALISER = 2;
+}
+
+message SubmitDarkOrderRequest {
+  string client_order_id = 1;
+  string firm_id = 2;
+  string isin = 3;
+  string side = 4; // "BUY" or "SELL"
+  string micro_quantity = 5; // e.g. "5000000000" (5,000 shares in micro-units)
+  string limit_price_sub_paise = 6; // Worst-case limit price collar
+  string min_fill_quantity = 7; // Minimum Fill Size (MFS)
+  DarkCrossMode cross_mode = 8;
+  LiquidityTier allowed_counterparty_tier = 9;
+  int64 expiry_unix_seconds = 10;
+}
+
+message SubmitDarkOrderResponse {
+  string dark_order_id = 1;
+  string status = 2; // "ACCEPTED", "RESTING", "FILLED", "REJECTED"
+  string initial_matched_quantity = 3;
+  int64 timestamp_ns = 4;
+}
+
+message CancelDarkOrderRequest {
+  string dark_order_id = 1;
+  string firm_id = 2;
+  string reason = 3;
+}
+
+message CancelDarkOrderResponse {
+  string dark_order_id = 1;
+  bool cancelled = 2;
+  string remaining_quantity = 3;
+}
+
+message GetDarkOrderStatusRequest {
+  string dark_order_id = 1;
+  string firm_id = 2;
+}
+
+message GetDarkOrderStatusResponse {
+  string dark_order_id = 1;
+  string isin = 2;
+  string side = 3;
+  string original_quantity = 4;
+  string filled_quantity = 5;
+  string remaining_quantity = 6;
+  string average_fill_price = 7;
+  string status = 8;
+  int64 created_at_unix = 9;
+}

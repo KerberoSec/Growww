@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package growww.fx.v1;
+
+option go_package = "github.com/growww/proto/gen/go/fx/v1;fxv1";
+
+message CurrencyBalance {
+  string currency_code = 1; // e.g. "USD", "EUR", "USDT"
+  uint64 raw_amount_e6 = 2;
+}
+
+message GetEffectiveCollateralRequest {
+  string account_id = 1;
+  repeated CurrencyBalance balances = 2;
+  bool apply_weekend_buffer = 3;
+}
+
+message CurrencyValuationDetail {
+  string currency_code = 1;
+  uint64 raw_amount_e6 = 2;
+  uint64 spot_rate_paise_e6 = 3; // Rate to INR in paise
+  uint32 base_haircut_bps = 4;
+  uint32 volatility_haircut_bps = 5;
+  uint32 total_haircut_bps = 6;
+  uint64 gross_inr_value_paise = 7;
+  uint64 net_collateral_inr_value_paise = 8;
+}
+
+message GetEffectiveCollateralResponse {
+  string account_id = 1;
+  repeated CurrencyValuationDetail currency_details = 2;
+  uint64 total_effective_inr_collateral_paise = 3;
+  uint64 total_fee_deduction_paise = 4; // 0.00% (Zero Fee) platform fee
+  int64 evaluated_at_ns = 5;
+}
+
+service FxHaircutService {
+  rpc GetEffectiveCollateralValue (GetEffectiveCollateralRequest) returns (GetEffectiveCollateralResponse);
+}

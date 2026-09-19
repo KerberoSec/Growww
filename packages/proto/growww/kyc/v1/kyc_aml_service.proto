@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package growww.kyc.v1;
+
+option go_package = "growww/kyc/v1;kycv1";
+
+service KYCService {
+  rpc GetKYCStatus (GetKYCStatusRequest) returns (GetKYCStatusResponse);
+  rpc InitiateKYC (InitiateKYCRequest) returns (InitiateKYCResponse);
+  rpc VerifyComplianceStatus (VerifyComplianceStatusRequest) returns (VerifyComplianceStatusResponse);
+}
+
+message GetKYCStatusRequest {
+  string user_id = 1;
+}
+
+message GetKYCStatusResponse {
+  string kyc_id = 1;
+  string user_id = 2;
+  string status = 3; // PENDING, PROCESSING, APPROVED, REJECTED, MANUAL_REVIEW
+  string risk_tier = 4; // LOW, MEDIUM, HIGH
+  string rejection_reason = 5;
+  int64 verified_at_unix = 6;
+  int64 expiry_at_unix = 7;
+}
+
+message InitiateKYCRequest {
+  string user_id = 1;
+  string jurisdiction = 2; // DOMESTIC_RESIDENT, GIFT_CITY_NRI
+}
+
+message InitiateKYCResponse {
+  string kyc_id = 1;
+  string digilocker_url = 2;
+  string upload_session_token = 3;
+}
+
+message VerifyComplianceStatusRequest {
+  string user_id = 1;
+  string ledger_address = 2;
+}
+
+message VerifyComplianceStatusResponse {
+  bool is_compliant = 1;
+  bool is_sanctioned = 2;
+  bool is_pep = 3;
+  string jurisdiction = 4;
+}

@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package growww.algo.v1;
+
+option go_package = "growww/algo/v1;algov1";
+
+service AlgoOrderService {
+  rpc SubmitAlgoOrder (SubmitAlgoOrderRequest) returns (SubmitAlgoOrderResponse);
+  rpc CancelAlgoOrder (CancelAlgoOrderRequest) returns (CancelAlgoOrderResponse);
+  rpc GetAlgoOrder (GetAlgoOrderRequest) returns (GetAlgoOrderResponse);
+  rpc ListActiveAlgoOrders (ListActiveAlgoOrdersRequest) returns (ListActiveAlgoOrdersResponse);
+}
+
+enum AlgoType {
+  ALGO_TYPE_UNSPECIFIED = 0;
+  ALGO_TYPE_ICEBERG = 1;
+  ALGO_TYPE_TRAILING_STOP = 2;
+  ALGO_TYPE_PEGGED = 3;
+  ALGO_TYPE_BRACKET = 4;
+  ALGO_TYPE_OCO = 5;
+  ALGO_TYPE_TWAP = 6;
+}
+
+enum PegOffsetType {
+  PEG_OFFSET_PRIMARY = 0;   // Peg to same side (Bid for Buy, Ask for Sell)
+  PEG_OFFSET_MARKET = 1;    // Peg to opposite side
+  PEG_OFFSET_MIDPOINT = 2;  // Peg to (Bid + Ask) / 2
+}
+
+message SubmitAlgoOrderRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string isin = 3;
+  string side = 4; // "BUY" or "SELL"
+  AlgoType algo_type = 5;
+  string total_quantity = 6; // e.g. "100.000000"
+  
+  // Iceberg Parameters
+  string display_quantity = 7; // e.g. "10.000000"
+  bool randomize_display = 8;
+  
+  // Trailing-Stop Parameters
+  string trail_amount = 9;      // Fixed INR trail (e.g. "5.00")
+  string trail_percent = 10;    // Percentage trail (e.g. "0.02" for 2%)
+  string activation_price = 11; // Optional activation threshold
+  
+  // Pegged Parameters
+  PegOffsetType peg_type = 12;
+  string peg_offset_paise = 13; // Offset in INR paise (+/-)
+  string limit_price_cap = 14;  // Worst-case limit price collar
+  
+  // Bracket / OCO Parameters
+  string take_profit_price = 15;
+  string stop_loss_price = 16;
+  
+  // TWAP Parameters
+  int64 twap_duration_seconds = 17;
+  int32 twap_slices_count = 18;
+}
+
+message SubmitAlgoOrderResponse {
+  string parent_order_id = 1;
+  AlgoType algo_type = 2;
+  string status = 3; // "ACTIVE", "PAUSED", "COMPLETED", "REJECTED"
+  int64 created_at_unix = 4;
+}
+
+message CancelAlgoOrderRequest {
+  string parent_order_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message CancelAlgoOrderResponse {
+  string parent_order_id = 1;
+  bool cancelled = 2;
+  string final_status = 3;
+}
+
+message GetAlgoOrderRequest {
+  string parent_order_id = 1;
+  string user_id = 2;
+}
+
+message GetAlgoOrderResponse {
+  string parent_order_id = 1;
+  string user_id = 2;
+  string isin = 3;
+  AlgoType algo_type = 4;
+  string status = 5;
+  string total_quantity = 6;
+  string filled_quantity = 7;
+  string remaining_quantity = 8;
+  string average_fill_price = 9;
+  int32 active_slices_count = 10;
+  int64 created_at_unix = 11;
+  int64 updated_at_unix = 12;
+}
+
+message ListActiveAlgoOrdersRequest {
+  string user_id = 1;
+  string isin = 2;
+}
+
+message ListActiveAlgoOrdersResponse {
+  repeated GetAlgoOrderResponse orders = 1;
+}

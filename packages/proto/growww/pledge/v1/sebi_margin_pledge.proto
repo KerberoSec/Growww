@@ -1,0 +1,191 @@
+syntax = "proto3";
+
+package growww.pledge.v1;
+
+option go_package = "github.com/growww/proto/gen/go/pledge/v1;pledgev1";
+
+enum DepositoryType {
+  DEPOSITORY_TYPE_UNSPECIFIED = 0;
+  DEPOSITORY_TYPE_NSDL = 1;
+  DEPOSITORY_TYPE_CDSL = 2;
+}
+
+enum PledgeType {
+  PLEDGE_TYPE_UNSPECIFIED = 0;
+  PLEDGE_TYPE_MARGIN_PLEDGE = 1;     // Client Demat -> TM Client Collateral Account
+  PLEDGE_TYPE_MARGIN_REPLEDGE = 2;   // TM Client Collateral Account -> CM / CC
+  PLEDGE_TYPE_MARGIN_UNPLEDGE = 3;   // Release collateral back to Client Demat
+  PLEDGE_TYPE_MARGIN_INVOCATION = 4; // Member default invocation into liquidation demat
+}
+
+enum PledgeStatus {
+  PLEDGE_STATUS_UNSPECIFIED = 0;
+  PLEDGE_STATUS_REQUESTED = 1;
+  PLEDGE_STATUS_OTP_TRIGGERED = 2;
+  PLEDGE_STATUS_OTP_AUTHENTICATED = 3;
+  PLEDGE_STATUS_PLEDGED_TO_TM = 4;
+  PLEDGE_STATUS_REPLEDGE_INITIATED = 5;
+  PLEDGE_STATUS_REPLEDGED_TO_CC = 6;
+  PLEDGE_STATUS_UNPLEDGE_REQUESTED = 7;
+  PLEDGE_STATUS_UNPLEDGE_RISK_VERIFIED = 8;
+  PLEDGE_STATUS_UNPLEDGE_CONFIRMED = 9;
+  PLEDGE_STATUS_INVOCATION_INITIATED = 10;
+  PLEDGE_STATUS_INVOKED_DEFAULT = 11;
+  PLEDGE_STATUS_REJECTED = 12;
+  PLEDGE_STATUS_EXPIRED = 13;
+}
+
+message CollateralSecuritiesItem {
+  string isin = 1;
+  string symbol = 2;
+  uint64 quantity = 3;
+  uint64 ltp_paise = 4;
+  uint32 haircut_bps = 5; // e.g., 2000 = 20.00%
+  uint64 collateral_value_paise = 6;
+  uint64 effective_margin_credit_paise = 7;
+}
+
+message InitiateMarginPledgeRequest {
+  string request_id = 1;
+  string account_id = 2;
+  string hashed_boid = 3;
+  DepositoryType depository = 4;
+  repeated CollateralSecuritiesItem securities = 5;
+  string ucc_code = 6;
+  string client_ip = 7;
+  string user_agent = 8;
+}
+
+message InitiateMarginPledgeResponse {
+  string pledge_id = 1;
+  PledgeStatus status = 2;
+  string depository_reference = 3;
+  string otp_session_token = 4;
+  int64 session_expires_at_unix_ns = 5;
+  string message = 6;
+}
+
+message TriggerDepositoryOtpRequest {
+  string pledge_id = 1;
+  string otp_session_token = 2;
+}
+
+message TriggerDepositoryOtpResponse {
+  string pledge_id = 1;
+  PledgeStatus status = 2;
+  string masked_mobile_number = 3;
+  string masked_email = 4;
+  int64 otp_expires_at_unix_ns = 5;
+  bool otp_dispatched = 6;
+}
+
+message ConfirmPledgeOtpRequest {
+  string pledge_id = 1;
+  string otp_session_token = 2;
+  string otp_code = 3;
+}
+
+message ConfirmPledgeOtpResponse {
+  string pledge_id = 1;
+  PledgeStatus status = 2;
+  string depository_confirmation_ref = 3;
+  uint64 total_collateral_value_paise = 4;
+  uint64 total_margin_credit_paise = 5;
+  uint64 platform_fee_paise = 6; // 0.00% (No fee at all) platform fee
+  string onchain_receipt_token_id = 7;
+  string onchain_tx_hash = 8;
+  bool custodial_hold_active = 9;
+}
+
+message InitiateMarginRePledgeRequest {
+  string pledge_id = 1;
+  string target_clearing_corp = 2; // "NSCCL" or "ICCL"
+  string cm_ccpa_account = 3;      // Clearing Member Client Collateral Pledge Account
+  string cc_account = 4;           // Clearing Corporation Account
+}
+
+message InitiateMarginRePledgeResponse {
+  string repledge_id = 1;
+  PledgeStatus status = 2;
+  string cc_confirmation_ref = 3;
+  int64 repledged_at_unix_ns = 4;
+}
+
+message InitiateMarginUnpledgeRequest {
+  string request_id = 1;
+  string account_id = 2;
+  string pledge_id = 3;
+  string isin = 4;
+  uint64 quantity = 5;
+  string reason = 6;
+}
+
+message InitiateMarginUnpledgeResponse {
+  string unpledge_request_id = 1;
+  PledgeStatus status = 2;
+  bool risk_margin_check_passed = 3;
+  uint64 remaining_margin_buffer_paise = 4;
+  string depository_unpledge_ref = 5;
+  string message = 6;
+}
+
+message InvokeMarginPledgeRequest {
+  string pledge_id = 1;
+  string account_id = 2;
+  string isin = 3;
+  uint64 quantity = 4;
+  string default_notice_id = 5;
+  string liquidation_demat_account = 6;
+  string authorized_by = 7;
+}
+
+message InvokeMarginPledgeResponse {
+  string invocation_id = 1;
+  PledgeStatus status = 2;
+  string depository_invocation_ref = 3;
+  uint64 invoked_value_paise = 4;
+  string onchain_invocation_tx_hash = 5;
+}
+
+message GetPledgeStatusRequest {
+  string pledge_id = 1;
+}
+
+message GetPledgeStatusResponse {
+  string pledge_id = 1;
+  string account_id = 2;
+  string hashed_boid = 3;
+  DepositoryType depository = 4;
+  PledgeStatus status = 5;
+  repeated CollateralSecuritiesItem securities = 6;
+  string depository_ref = 7;
+  string cc_repledge_ref = 8;
+  uint64 total_collateral_value_paise = 9;
+  uint64 effective_margin_credit_paise = 10;
+  bool custodial_hold_active = 11;
+  int64 created_at_unix_ns = 12;
+  int64 updated_at_unix_ns = 13;
+}
+
+message QueryCollateralHoldingsRequest {
+  string account_id = 1;
+  bool active_only = 2;
+}
+
+message QueryCollateralHoldingsResponse {
+  string account_id = 1;
+  repeated CollateralSecuritiesItem holdings = 2;
+  uint64 aggregate_collateral_value_paise = 3;
+  uint64 aggregate_margin_credit_paise = 4;
+}
+
+service MarginPledgeService {
+  rpc InitiateMarginPledge (InitiateMarginPledgeRequest) returns (InitiateMarginPledgeResponse);
+  rpc TriggerDepositoryOtp (TriggerDepositoryOtpRequest) returns (TriggerDepositoryOtpResponse);
+  rpc ConfirmPledgeOtp (ConfirmPledgeOtpRequest) returns (ConfirmPledgeOtpResponse);
+  rpc InitiateMarginRePledge (InitiateMarginRePledgeRequest) returns (InitiateMarginRePledgeResponse);
+  rpc InitiateMarginUnpledge (InitiateMarginUnpledgeRequest) returns (InitiateMarginUnpledgeResponse);
+  rpc InvokeMarginPledge (InvokeMarginPledgeRequest) returns (InvokeMarginPledgeResponse);
+  rpc GetPledgeStatus (GetPledgeStatusRequest) returns (GetPledgeStatusResponse);
+  rpc QueryCollateralHoldings (QueryCollateralHoldingsRequest) returns (QueryCollateralHoldingsResponse);
+}

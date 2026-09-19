@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package growww.sgf.v1;
+
+option go_package = "growww/sgf/v1;sgfv1";
+
+service SettlementGuaranteeFundService {
+  rpc GetSgfCorpusStatus (GetSgfCorpusStatusRequest) returns (GetSgfCorpusStatusResponse);
+  rpc CalculateMemberQuotas (CalculateMemberQuotasRequest) returns (CalculateMemberQuotasResponse);
+  rpc RunStressTest (RunStressTestRequest) returns (RunStressTestResponse);
+  rpc InitiateDefaultWaterfall (InitiateDefaultWaterfallRequest) returns (InitiateDefaultWaterfallResponse);
+  rpc GetWaterfallStatus (GetWaterfallStatusRequest) returns (GetWaterfallStatusResponse);
+  rpc IssueAssessmentCall (IssueAssessmentCallRequest) returns (IssueAssessmentCallResponse);
+}
+
+enum WaterfallStage {
+  WATERFALL_STAGE_UNSPECIFIED = 0;
+  WATERFALL_STAGE_DEFAULTER_MARGINS = 1;
+  WATERFALL_STAGE_DEFAULTER_SGF = 2;
+  WATERFALL_STAGE_CC_CAPITAL = 3;
+  WATERFALL_STAGE_POOLED_SGF = 4;
+  WATERFALL_STAGE_CC_RESERVES_INSURANCE = 5;
+  WATERFALL_STAGE_ASSESSMENT_CALLS = 6;
+  WATERFALL_STAGE_RESOLVED = 7;
+  WATERFALL_STAGE_FAILED = 8;
+}
+
+message GetSgfCorpusStatusRequest {}
+
+message GetSgfCorpusStatusResponse {
+  string total_corpus_inr = 1;
+  string cc_skin_in_the_game_inr = 2;
+  string members_total_contribution_inr = 3;
+  string available_liquidity_inr = 4;
+  string cover1_stress_requirement_inr = 5;
+  string cover2_stress_requirement_inr = 6;
+  bool is_corpus_adequate = 7;
+  int64 updated_at_unix_ns = 8;
+}
+
+message CalculateMemberQuotasRequest {
+  string calculation_period = 1; // e.g. "2026-09"
+}
+
+message MemberQuotaItem {
+  string member_id = 1;
+  string ledger_address = 2;
+  string required_quota_inr = 3;
+  string current_deposited_inr = 4;
+  string shortfall_inr = 5;
+  string turnover_share_percent = 6;
+  string peak_margin_share_percent = 7;
+}
+
+message CalculateMemberQuotasResponse {
+  string total_mrc_inr = 1;
+  repeated MemberQuotaItem member_quotas = 2;
+}
+
+message RunStressTestRequest {
+  string scenario_id = 1; // "LEHMAN_2008", "COVID_2020", "EQUITY_SHOCK_30PCT"
+  bool apply_cover2 = 2;
+}
+
+message RunStressTestResponse {
+  string test_run_id = 1;
+  string scenario_name = 2;
+  string worst_case_default_loss_inr = 3;
+  string largest_defaulter_member_id = 4;
+  string second_largest_defaulter_member_id = 5;
+  string current_sgf_corpus_inr = 6;
+  string corpus_surplus_or_deficit_inr = 7;
+  bool is_compliant_with_pfmi = 8;
+  int64 executed_at_unix_ns = 9;
+}
+
+message InitiateDefaultWaterfallRequest {
+  string default_id = 1;
+  string defaulting_member_id = 2;
+  string defaulting_ledger_address = 3;
+  string settlement_cycle_id = 4;
+  string total_default_amount_inr = 5;
+  string default_reason = 6;
+}
+
+message InitiateDefaultWaterfallResponse {
+  string waterfall_execution_id = 1;
+  string workflow_id = 2;
+  WaterfallStage current_stage = 3;
+  string total_default_amount_inr = 4;
+  string amount_resolved_inr = 5;
+  string remaining_deficit_inr = 6;
+  int64 started_at_unix_ns = 7;
+}
+
+message GetWaterfallStatusRequest {
+  string waterfall_execution_id = 1;
+}
+
+message TrancheDeductionDetail {
+  WaterfallStage stage = 1;
+  string tranche_name = 2;
+  string amount_drawn_inr = 3;
+  string on_chain_tx_hash = 4;
+  int64 executed_at_unix_ns = 5;
+}
+
+message GetWaterfallStatusResponse {
+  string waterfall_execution_id = 1;
+  string defaulting_member_id = 2;
+  WaterfallStage current_stage = 3;
+  string total_default_amount_inr = 4;
+  string total_recovered_inr = 5;
+  string remaining_deficit_inr = 6;
+  repeated TrancheDeductionDetail tranche_deductions = 7;
+  bool is_complete = 8;
+}
+
+message IssueAssessmentCallRequest {
+  string waterfall_execution_id = 1;
+  string total_assessment_amount_inr = 2;
+  int32 payment_window_hours = 3;
+}
+
+message IssueAssessmentCallResponse {
+  string assessment_id = 1;
+  int32 participants_notified_count = 2;
+  string total_assessed_inr = 3;
+  int64 due_timestamp_unix = 4;
+}

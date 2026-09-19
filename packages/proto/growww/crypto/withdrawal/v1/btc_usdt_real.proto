@@ -1,0 +1,164 @@
+syntax = "proto3";
+
+package growww.crypto.withdrawal.v1;
+
+option go_package = "growww/crypto/withdrawal/v1;withdrawalv1";
+
+// Service managing secure real-money crypto withdrawals and risk clearing.
+service CryptoWithdrawalService {
+  // Register a new external withdrawal address subject to a mandatory 24-hour cooldown.
+  rpc RegisterWithdrawalAddress (RegisterWithdrawalAddressRequest) returns (RegisterWithdrawalAddressResponse);
+
+  // List all registered withdrawal addresses and their activation countdown status.
+  rpc ListWithdrawalAddresses (ListWithdrawalAddressesRequest) returns (ListWithdrawalAddressesResponse);
+
+  // Submit a real-money crypto withdrawal request with Passkey and 2FA authentication.
+  rpc InitiateCryptoWithdrawal (InitiateCryptoWithdrawalRequest) returns (InitiateCryptoWithdrawalResponse);
+
+  // Query real-time status, risk tier, and on-chain confirmation progress of a withdrawal.
+  rpc GetWithdrawalStatus (GetWithdrawalStatusRequest) returns (GetWithdrawalStatusResponse);
+
+  // List historical withdrawals for an authenticated user.
+  rpc ListWithdrawalHistory (ListWithdrawalHistoryRequest) returns (ListWithdrawalHistoryResponse);
+
+  // Administrative Maker-Checker decision endpoint for Tier 2 and Tier 3 reviews.
+  rpc MakerCheckerReviewWithdrawal (MakerCheckerReviewWithdrawalRequest) returns (MakerCheckerReviewWithdrawalResponse);
+}
+
+enum BlockchainNetwork {
+  BLOCKCHAIN_NETWORK_UNSPECIFIED = 0;
+  BLOCKCHAIN_NETWORK_BITCOIN = 1;
+  BLOCKCHAIN_NETWORK_ETHEREUM = 2;
+  BLOCKCHAIN_NETWORK_TRON = 3;
+}
+
+enum CryptoAsset {
+  CRYPTO_ASSET_UNSPECIFIED = 0;
+  CRYPTO_ASSET_BTC = 1;
+  CRYPTO_ASSET_USDT = 2;
+}
+
+enum WithdrawalStatus {
+  WITHDRAWAL_STATUS_UNSPECIFIED = 0;
+  WITHDRAWAL_STATUS_PENDING_RISK_CHECK = 1;
+  WITHDRAWAL_STATUS_PENDING_MAKER_REVIEW = 2;
+  WITHDRAWAL_STATUS_PENDING_CHECKER_APPROVAL = 3;
+  WITHDRAWAL_STATUS_HELD_IN_WALLET = 4;
+  WITHDRAWAL_STATUS_BURNING_ON_BESU = 5;
+  WITHDRAWAL_STATUS_AWAITING_MPC_SIGNING = 6;
+  WITHDRAWAL_STATUS_BROADCASTED = 7;
+  WITHDRAWAL_STATUS_CONFIRMED = 8;
+  WITHDRAWAL_STATUS_REJECTED = 9;
+  WITHDRAWAL_STATUS_FAILED = 10;
+}
+
+enum RiskTier {
+  RISK_TIER_UNSPECIFIED = 0;
+  RISK_TIER_1_AUTOMATED = 1;
+  RISK_TIER_2_SINGLE_MAKER = 2;
+  RISK_TIER_3_DUAL_MAKER_CHECKER = 3;
+}
+
+message RegisterWithdrawalAddressRequest {
+  string user_id = 1;
+  BlockchainNetwork network = 2;
+  CryptoAsset asset = 3;
+  string destination_address = 4;
+  string address_label = 5;
+  string totp_code = 6;
+  string passkey_assertion_json = 7; // WebAuthn assertion payload
+  string idempotency_key = 8;
+}
+
+message RegisterWithdrawalAddressResponse {
+  string address_id = 1;
+  string destination_address = 2;
+  BlockchainNetwork network = 3;
+  bool is_active = 4;                // False until 24-hour cooldown expires
+  int64 registered_at_unix_ms = 5;
+  int64 activates_at_unix_ms = 6;    // Exactly registered_at + 24 hours
+  int64 remaining_lock_seconds = 7;
+}
+
+message ListWithdrawalAddressesRequest {
+  string user_id = 1;
+  BlockchainNetwork network_filter = 2;
+}
+
+message ListWithdrawalAddressesResponse {
+  repeated RegisterWithdrawalAddressResponse addresses = 1;
+}
+
+message InitiateCryptoWithdrawalRequest {
+  string user_id = 1;
+  string address_id = 2;              // Must reference an active whitelisted address
+  BlockchainNetwork network = 3;
+  CryptoAsset asset = 4;
+  string amount = 5;                  // Decimal string representation of amount
+  string totp_code = 6;
+  string passkey_assertion_json = 7;  // Cryptographic user authorization
+  string client_ip = 8;
+  string device_fingerprint = 9;
+  string idempotency_key = 10;
+}
+
+message InitiateCryptoWithdrawalResponse {
+  string withdrawal_id = 1;
+  WithdrawalStatus status = 2;
+  RiskTier assigned_risk_tier = 3;
+  int32 risk_score = 4;               // 0 to 100
+  string network_fee_estimated = 5;
+  string platform_fee = 6;
+  string net_payout_amount = 7;
+  int64 created_at_unix_ms = 8;
+}
+
+message GetWithdrawalStatusRequest {
+  string withdrawal_id = 1;
+  string user_id = 2;
+}
+
+message GetWithdrawalStatusResponse {
+  string withdrawal_id = 1;
+  string user_id = 2;
+  WithdrawalStatus status = 3;
+  RiskTier risk_tier = 4;
+  BlockchainNetwork network = 5;
+  CryptoAsset asset = 6;
+  string amount = 7;
+  string destination_address = 8;
+  string besu_burn_tx_hash = 9;      // Hash of collateral burn on Besu
+  string public_chain_tx_hash = 10;   // Bitcoin/Ethereum/Tron transaction hash
+  int32 confirmations = 11;
+  int32 required_confirmations = 12;
+  string failure_reason = 13;
+  int64 created_at_unix_ms = 14;
+  int64 updated_at_unix_ms = 15;
+}
+
+message ListWithdrawalHistoryRequest {
+  string user_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListWithdrawalHistoryResponse {
+  repeated GetWithdrawalStatusResponse withdrawals = 1;
+  string next_page_token = 2;
+}
+
+message MakerCheckerReviewWithdrawalRequest {
+  string withdrawal_id = 1;
+  string reviewer_admin_id = 2;
+  string reviewer_role = 3;          // "MAKER" or "CHECKER"
+  bool decision_approve = 4;         // True to approve, False to reject
+  string rejection_reason = 5;
+  string admin_passkey_assertion = 6; // Cryptographic attestation by administrator
+}
+
+message MakerCheckerReviewWithdrawalResponse {
+  string withdrawal_id = 1;
+  WithdrawalStatus new_status = 2;
+  string message = 3;
+  int64 reviewed_at_unix_ms = 4;
+}

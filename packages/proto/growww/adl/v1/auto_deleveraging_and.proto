@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package growww.adl.v1;
+
+option go_package = "growww/adl/v1;adlv1";
+
+// Service managing real-time Auto-Deleveraging priority ranking and execution
+service AdlService {
+  // Query the current ADL indicator and queue priority for a specific account and contract
+  rpc GetAdlPriorityStatus (AdlPriorityStatusRequest) returns (AdlPriorityStatusResponse);
+
+  // Stream real-time ADL 5-bar indicator updates for an active trader session
+  rpc StreamAdlIndicator (StreamAdlIndicatorRequest) returns (stream AdlIndicatorUpdate);
+
+  // Simulate what-if ADL exposure if price moves by delta or rank increases
+  rpc SimulateAdlExposure (SimulateAdlExposureRequest) returns (SimulateAdlExposureResponse);
+
+  // Administrative endpoint to inspect the top N queue candidates for an instrument
+  rpc GetTopAdlCandidates (GetTopAdlCandidatesRequest) returns (GetTopAdlCandidatesResponse);
+}
+
+enum PositionSide {
+  POSITION_SIDE_UNSPECIFIED = 0;
+  POSITION_SIDE_LONG = 1;
+  POSITION_SIDE_SHORT = 2;
+}
+
+enum AdlRiskBarLevel {
+  ADL_RISK_BAR_LEVEL_UNSPECIFIED = 0;
+  ADL_RISK_BAR_LEVEL_ONE = 1;    // 0% - 20% (Lowest Priority)
+  ADL_RISK_BAR_LEVEL_TWO = 2;    // 20% - 40%
+  ADL_RISK_BAR_LEVEL_THREE = 3;  // 40% - 60%
+  ADL_RISK_BAR_LEVEL_FOUR = 4;   // 60% - 80%
+  ADL_RISK_BAR_LEVEL_FIVE = 5;   // 80% - 100% (Immediate Deleveraging Candidate)
+}
+
+message AdlPriorityStatusRequest {
+  string user_id = 1;
+  string symbol = 2;
+}
+
+message AdlPriorityStatusResponse {
+  string user_id = 1;
+  string symbol = 2;
+  PositionSide side = 3;
+  string position_quantity = 4;
+  string entry_price = 5;
+  string mark_price = 6;
+  string unrealized_pnl_inr = 7;
+  string effective_leverage = 8;
+  string profit_percentile = 9;
+  string adl_score = 10;
+  AdlRiskBarLevel risk_bar_level = 11;
+  uint32 rank_in_queue = 12;
+  uint32 total_profitable_counterparties = 13;
+  int64 timestamp_ns = 14;
+}
+
+message StreamAdlIndicatorRequest {
+  string user_id = 1;
+  repeated string symbols = 2;
+}
+
+message AdlIndicatorUpdate {
+  string user_id = 1;
+  string symbol = 2;
+  AdlRiskBarLevel risk_bar_level = 3;
+  string adl_score = 4;
+  uint32 rank_in_queue = 5;
+  int64 updated_at_ns = 6;
+}
+
+message SimulateAdlExposureRequest {
+  string user_id = 1;
+  string symbol = 2;
+  string simulated_mark_price = 3;
+}
+
+message SimulateAdlExposureResponse {
+  string simulated_adl_score = 1;
+  AdlRiskBarLevel simulated_risk_bar_level = 2;
+  string estimated_bankruptcy_pnl_inr = 3;
+}
+
+message GetTopAdlCandidatesRequest {
+  string symbol = 1;
+  PositionSide side = 2;
+  uint32 limit = 3;
+}
+
+message AdlCandidateSummary {
+  string account_hash = 1;
+  string position_quantity = 2;
+  string effective_leverage = 3;
+  string profit_percentile = 4;
+  string adl_score = 5;
+  uint32 rank = 6;
+}
+
+message GetTopAdlCandidatesResponse {
+  string symbol = 1;
+  PositionSide side = 2;
+  repeated AdlCandidateSummary candidates = 3;
+  int64 snapshot_timestamp_ns = 4;
+}

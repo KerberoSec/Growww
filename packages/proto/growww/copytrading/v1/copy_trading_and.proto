@@ -1,0 +1,221 @@
+syntax = "proto3";
+
+package growww.copytrading.v1;
+
+option go_package = "growww/copytrading/v1;copytradingv1";
+
+service CopyTradingService {
+  // Strategy Management
+  rpc CreateMasterStrategy (CreateMasterStrategyRequest) returns (CreateMasterStrategyResponse);
+  rpc UpdateMasterStrategy (UpdateMasterStrategyRequest) returns (UpdateMasterStrategyResponse);
+  rpc GetMasterStrategy (GetMasterStrategyRequest) returns (GetMasterStrategyResponse);
+  rpc ListMasterStrategies (ListMasterStrategiesRequest) returns (ListMasterStrategiesResponse);
+
+  // Follower Subscription & Allocation
+  rpc SubscribeStrategy (SubscribeStrategyRequest) returns (SubscribeStrategyResponse);
+  rpc UnsubscribeStrategy (UnsubscribeStrategyRequest) returns (UnsubscribeStrategyResponse);
+  rpc UpdateAllocation (UpdateAllocationRequest) returns (UpdateAllocationResponse);
+  rpc GetSubscriptionStatus (GetSubscriptionStatusRequest) returns (GetSubscriptionStatusResponse);
+
+  // Circuit Breaker & Detachment Management
+  rpc TriggerManualDetachment (TriggerManualDetachmentRequest) returns (TriggerManualDetachmentResponse);
+  rpc ResumeSubscription (ResumeSubscriptionRequest) returns (ResumeSubscriptionResponse);
+
+  // High-Water Mark & Settlement Queries
+  rpc GetHwmSnapshot (GetHwmSnapshotRequest) returns (GetHwmSnapshotResponse);
+  rpc ListSettlementHistory (ListSettlementHistoryRequest) returns (ListSettlementHistoryResponse);
+}
+
+enum ReplicationMode {
+  REPLICATION_MODE_UNSPECIFIED = 0;
+  REPLICATION_MODE_EQUITY_PROPORTIONAL = 1;
+  REPLICATION_MODE_FIXED_RATIO = 2;
+  REPLICATION_MODE_CASH_PROPORTIONAL = 3;
+}
+
+enum SubscriptionStatus {
+  SUBSCRIPTION_STATUS_UNSPECIFIED = 0;
+  SUBSCRIPTION_STATUS_ACTIVE = 1;
+  SUBSCRIPTION_STATUS_PAUSED = 2;
+  SUBSCRIPTION_STATUS_CIRCUIT_BREAKER_DETACHED = 3;
+  SUBSCRIPTION_STATUS_CLOSED = 4;
+}
+
+enum DetachmentAction {
+  DETACHMENT_ACTION_UNSPECIFIED = 0;
+  DETACHMENT_ACTION_KEEP_POSITIONS = 1;
+  DETACHMENT_ACTION_MARKET_UNWIND = 2;
+}
+
+message CreateMasterStrategyRequest {
+  string master_user_id = 1;
+  string strategy_name = 2;
+  string description = 3;
+  string profit_share_percentage = 4; // Range: "10.00" to "15.00"
+  string max_followers = 5;
+  string min_capital_inr = 6;
+}
+
+message CreateMasterStrategyResponse {
+  string strategy_id = 1;
+  string status = 2;
+  int64 created_at_unix = 3;
+}
+
+message UpdateMasterStrategyRequest {
+  string strategy_id = 1;
+  string master_user_id = 2;
+  bool is_active = 3;
+  string description = 4;
+}
+
+message UpdateMasterStrategyResponse {
+  string strategy_id = 1;
+  bool success = 2;
+  int64 updated_at_unix = 3;
+}
+
+message GetMasterStrategyRequest {
+  string strategy_id = 1;
+}
+
+message GetMasterStrategyResponse {
+  string strategy_id = 1;
+  string master_user_id = 2;
+  string strategy_name = 3;
+  string description = 4;
+  string profit_share_percentage = 5;
+  int32 active_followers = 6;
+  string total_allocated_equity = 7;
+  string historical_roi_percentage = 8;
+  string max_historical_drawdown = 9;
+  bool is_active = 10;
+}
+
+message ListMasterStrategiesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  bool active_only = 3;
+}
+
+message ListMasterStrategiesResponse {
+  repeated GetMasterStrategyResponse strategies = 1;
+  string next_page_token = 2;
+}
+
+message SubscribeStrategyRequest {
+  string follower_user_id = 1;
+  string strategy_id = 2;
+  ReplicationMode replication_mode = 3;
+  string allocated_capital_inr = 4;
+  string max_drawdown_percentage = 5; // e.g., "10.00" for 10%
+  DetachmentAction detachment_action = 6;
+  string max_slippage_tolerance = 7;  // Default: "0.0050" (0.5%)
+}
+
+message SubscribeStrategyResponse {
+  string subscription_id = 1;
+  SubscriptionStatus status = 2;
+  string initial_hwm = 3;
+  int64 subscribed_at_unix = 4;
+}
+
+message UnsubscribeStrategyRequest {
+  string subscription_id = 1;
+  string follower_user_id = 2;
+  DetachmentAction action = 3;
+}
+
+message UnsubscribeStrategyResponse {
+  string subscription_id = 1;
+  SubscriptionStatus status = 2;
+  int64 terminated_at_unix = 3;
+}
+
+message UpdateAllocationRequest {
+  string subscription_id = 1;
+  string follower_user_id = 2;
+  string new_allocated_capital_inr = 3;
+}
+
+message UpdateAllocationResponse {
+  string subscription_id = 1;
+  string updated_allocated_capital_inr = 2;
+  int64 updated_at_unix = 3;
+}
+
+message GetSubscriptionStatusRequest {
+  string subscription_id = 1;
+}
+
+message GetSubscriptionStatusResponse {
+  string subscription_id = 1;
+  string follower_user_id = 2;
+  string strategy_id = 3;
+  SubscriptionStatus status = 4;
+  string allocated_capital = 5;
+  string current_nav = 6;
+  string current_hwm = 7;
+  string current_drawdown_percentage = 8;
+  int64 last_replication_unix = 9;
+}
+
+message TriggerManualDetachmentRequest {
+  string subscription_id = 1;
+  string reason = 2;
+  DetachmentAction action = 3;
+}
+
+message TriggerManualDetachmentResponse {
+  string subscription_id = 1;
+  SubscriptionStatus status = 2;
+  int64 detached_at_unix = 3;
+}
+
+message ResumeSubscriptionRequest {
+  string subscription_id = 1;
+  string follower_user_id = 2;
+  string new_allocated_capital_inr = 3;
+}
+
+message ResumeSubscriptionResponse {
+  string subscription_id = 1;
+  SubscriptionStatus status = 2;
+  string reset_hwm = 3;
+  int64 resumed_at_unix = 4;
+}
+
+message GetHwmSnapshotRequest {
+  string subscription_id = 1;
+}
+
+message GetHwmSnapshotResponse {
+  string subscription_id = 1;
+  string current_hwm = 2;
+  string peak_nav = 3;
+  string cumulative_profit_shared = 4;
+  int64 last_settled_at_unix = 5;
+}
+
+message ListSettlementHistoryRequest {
+  string subscription_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message SettlementRecord {
+  string settlement_id = 1;
+  string cycle_start_unix = 2;
+  string cycle_end_unix = 3;
+  string pre_settlement_hwm = 4;
+  string post_settlement_hwm = 5;
+  string net_new_profit = 6;
+  string profit_share_amount = 7;
+  string gst_amount = 8;
+  string on_chain_tx_hash = 9;
+}
+
+message ListSettlementHistoryResponse {
+  repeated SettlementRecord records = 1;
+  string next_page_token = 2;
+}

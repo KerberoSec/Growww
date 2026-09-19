@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package growww.solana_ingress.v1;
+
+option go_package = "growww/solana_ingress/v1;solana_ingressv1";
+
+service SolanaIngressService {
+  rpc RegisterCustodialDepositAccount (RegisterCustodialDepositAccountRequest) returns (RegisterCustodialDepositAccountResponse);
+  rpc GetDepositTransactionStatus (GetDepositTransactionStatusRequest) returns (GetDepositTransactionStatusResponse);
+  rpc GetSlotProgression (GetSlotProgressionRequest) returns (GetSlotProgressionResponse);
+  rpc VerifyWormholeVAA (VerifyWormholeVAARequest) returns (VerifyWormholeVAAResponse);
+  rpc ListUnfinalizedDeposits (ListUnfinalizedDepositsRequest) returns (ListUnfinalizedDepositsResponse);
+  rpc TriggerManualAttestation (TriggerManualAttestationRequest) returns (TriggerManualAttestationResponse);
+}
+
+enum CommitmentLevel {
+  COMMITMENT_LEVEL_UNSPECIFIED = 0;
+  COMMITMENT_LEVEL_PROCESSED = 1;
+  COMMITMENT_LEVEL_CONFIRMED = 2;
+  COMMITMENT_LEVEL_FINALIZED = 3;
+}
+
+enum IngressDepositStatus {
+  INGRESS_DEPOSIT_STATUS_UNSPECIFIED = 0;
+  INGRESS_DEPOSIT_STATUS_DETECTED = 1;
+  INGRESS_DEPOSIT_STATUS_CONFIRMED = 2;
+  INGRESS_DEPOSIT_STATUS_FINALIZED = 3;
+  INGRESS_DEPOSIT_STATUS_CREDITED = 4;
+  INGRESS_DEPOSIT_STATUS_FORK_DROPPED = 5;
+  INGRESS_DEPOSIT_STATUS_REJECTED = 6;
+}
+
+enum TokenType {
+  TOKEN_TYPE_UNSPECIFIED = 0;
+  TOKEN_TYPE_SOL_NATIVE = 1;
+  TOKEN_TYPE_SPL_USDC = 2;
+  TOKEN_TYPE_SPL_USDT = 3;
+  TOKEN_TYPE_WORMHOLE_NTT_CUSTOM = 4;
+}
+
+message RegisterCustodialDepositAccountRequest {
+  string user_id = 1;
+  TokenType token_type = 2;
+  string memo_identifier = 3;
+  string requested_by_service = 4;
+}
+
+message RegisterCustodialDepositAccountResponse {
+  string user_id = 1;
+  string solana_wallet_pubkey = 2;
+  string associated_token_address = 3;
+  string token_mint_address = 4;
+  int64 rent_exempt_lamports = 5;
+  int64 created_at_unix_ms = 6;
+}
+
+message GetDepositTransactionStatusRequest {
+  string transaction_signature = 1;
+}
+
+message GetDepositTransactionStatusResponse {
+  string transaction_signature = 1;
+  uint64 slot = 2;
+  string block_hash = 3;
+  IngressDepositStatus status = 4;
+  CommitmentLevel commitment = 5;
+  string sender_address = 6;
+  string recipient_address = 7;
+  TokenType token_type = 8;
+  string token_mint_address = 9;
+  uint64 amount_subunits = 10;
+  uint32 token_decimals = 11;
+  string amount_decimal = 12;
+  int64 detected_at_unix_ms = 13;
+  int64 finalized_at_unix_ms = 14;
+  int64 confirmations = 15;
+}
+
+message GetSlotProgressionRequest {}
+
+message GetSlotProgressionResponse {
+  uint64 current_processed_slot = 1;
+  uint64 current_confirmed_slot = 2;
+  uint64 current_finalized_slot = 3;
+  int64 slot_lag = 4;
+  int64 active_fork_branches = 5;
+  int64 last_reorg_detected_unix_ms = 6;
+}
+
+message VerifyWormholeVAARequest {
+  bytes raw_vaa_bytes = 1;
+  bool submit_attestation_to_clearing = 2;
+}
+
+message VerifyWormholeVAAResponse {
+  bool is_valid = 1;
+  string emitter_chain = 2;
+  string emitter_address = 3;
+  uint64 sequence = 4;
+  uint32 consistency_level = 5;
+  string payload_type = 6;
+  string recipient_address = 7;
+  uint64 amount_subunits = 8;
+  string token_mint_address = 9;
+  string clearing_attestation_id = 10;
+  string error_message = 11;
+}
+
+message ListUnfinalizedDepositsRequest {
+  uint32 limit = 1;
+}
+
+message ListUnfinalizedDepositsResponse {
+  repeated GetDepositTransactionStatusResponse pending_deposits = 1;
+}
+
+message TriggerManualAttestationRequest {
+  string transaction_signature = 1;
+  string reason = 2;
+  string operator_id = 3;
+}
+
+message TriggerManualAttestationResponse {
+  bool success = 1;
+  string attestation_id = 2;
+  string status = 3;
+}

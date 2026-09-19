@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package growww.cbdc.v1;
+
+option go_package = "growww/cbdc/v1;cbdcv1";
+
+service CbdcRtgsAdapterService {
+  rpc ExecuteCbdcTransfer (ExecuteCbdcTransferRequest) returns (ExecuteCbdcTransferResponse);
+  rpc ExecuteRtgsSettlement (ExecuteRtgsSettlementRequest) returns (ExecuteRtgsSettlementResponse);
+  rpc QueryPaymentStatus (QueryPaymentStatusRequest) returns (QueryPaymentStatusResponse);
+  rpc GetCbdcWalletBalance (GetCbdcWalletBalanceRequest) returns (GetCbdcWalletBalanceResponse);
+  rpc InitiateLiquiditySweep (InitiateLiquiditySweepRequest) returns (InitiateLiquiditySweepResponse);
+}
+
+enum SettlementRail {
+  SETTLEMENT_RAIL_UNSPECIFIED = 0;
+  SETTLEMENT_RAIL_CBDC_E_RUPEE = 1;
+  SETTLEMENT_RAIL_RBI_RTGS_ISO20022 = 2;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_SETTLED_SUCCESS = 2;
+  PAYMENT_STATUS_REJECTED = 3;
+  PAYMENT_STATUS_TIMED_OUT = 4;
+}
+
+message ExecuteCbdcTransferRequest {
+  string settlement_id = 1;
+  string sender_wallet_id = 2;
+  string recipient_wallet_id = 3;
+  string amount_inr = 4; // Decimal string with paise precision (e.g., "150000.50")
+  string purpose_code = 5; // "SEBI_EQUITY_DVP", "SGF_MARGIN_RESERVE"
+  string idempotency_key = 6;
+}
+
+message ExecuteCbdcTransferResponse {
+  string settlement_id = 1;
+  string rbi_transaction_reference = 2;
+  PaymentStatus status = 3;
+  string amount_inr = 4;
+  int64 settled_at_unix_ns = 5;
+  string digital_signature_receipt = 6;
+}
+
+message ExecuteRtgsSettlementRequest {
+  string settlement_id = 1;
+  string sender_account_number = 2;
+  string sender_ifsc = 3;
+  string recipient_account_number = 4;
+  string recipient_ifsc = 5;
+  string amount_inr = 6;
+  string end_to_end_id = 7; // pacs.009 EndToEndId
+  string uetr = 8; // Unique End-to-end Transaction Reference (UUID)
+}
+
+message ExecuteRtgsSettlementResponse {
+  string settlement_id = 1;
+  string utr_number = 2; // Unique Transaction Reference from RBI
+  PaymentStatus status = 3;
+  string amount_inr = 4;
+  int64 settled_at_unix_ns = 5;
+}
+
+message QueryPaymentStatusRequest {
+  string settlement_id = 1;
+  SettlementRail rail = 2;
+}
+
+message QueryPaymentStatusResponse {
+  string settlement_id = 1;
+  string bank_reference = 2;
+  PaymentStatus status = 3;
+  string error_code = 4;
+  string error_message = 5;
+  int64 updated_at_unix_ns = 6;
+}
+
+message GetCbdcWalletBalanceRequest {
+  string wallet_id = 1;
+}
+
+message GetCbdcWalletBalanceResponse {
+  string wallet_id = 1;
+  string available_balance_inr = 2;
+  string blocked_margin_balance_inr = 3;
+  string total_balance_inr = 4;
+  int64 queried_at_unix_ns = 5;
+}
+
+message InitiateLiquiditySweepRequest {
+  string sweep_id = 1;
+  string source_rail = 2; // "COMMERCIAL_BANK_ESCROW"
+  string destination_rail = 3; // "RBI_CBDC_POOL"
+  string amount_inr = 4;
+}
+
+message InitiateLiquiditySweepResponse {
+  string sweep_id = 1;
+  bool initiated = 2;
+  string status = 3;
+}

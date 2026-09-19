@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package growww.deposit.v1;
+
+option go_package = "growww/deposit/v1;depositv1";
+
+service UsdtDepositService {
+  rpc GenerateDepositAddress (GenerateDepositAddressRequest) returns (GenerateDepositAddressResponse);
+  rpc GetDepositStatus (GetDepositStatusRequest) returns (GetDepositStatusResponse);
+  rpc ListUserDeposits (ListUserDepositsRequest) returns (ListUserDepositsResponse);
+  rpc SimulateDepositVerification (SimulateDepositVerificationRequest) returns (SimulateDepositVerificationResponse);
+  rpc TriggerVaultSweep (TriggerVaultSweepRequest) returns (TriggerVaultSweepResponse);
+  rpc GetVaultBalance (GetVaultBalanceRequest) returns (GetVaultBalanceResponse);
+}
+
+enum BlockchainNetwork {
+  BLOCKCHAIN_NETWORK_UNSPECIFIED = 0;
+  BLOCKCHAIN_NETWORK_ETHEREUM_MAINNET = 1;
+  BLOCKCHAIN_NETWORK_TRON_MAINNET = 2;
+  BLOCKCHAIN_NETWORK_POLYGON_POS = 3;
+  BLOCKCHAIN_NETWORK_BESU_PRIVATE = 4;
+}
+
+enum DepositStatus {
+  DEPOSIT_STATUS_UNSPECIFIED = 0;
+  DEPOSIT_STATUS_DETECTED = 1;
+  DEPOSIT_STATUS_CONFIRMING = 2;
+  DEPOSIT_STATUS_CONFIRMED = 3;
+  DEPOSIT_STATUS_AML_SCREENING = 4;
+  DEPOSIT_STATUS_AML_CLEARED = 5;
+  DEPOSIT_STATUS_AML_HOLD = 6;
+  DEPOSIT_STATUS_CREDITED = 7;
+  DEPOSIT_STATUS_MINT_SUBMITTED = 8;
+  DEPOSIT_STATUS_MINT_COMPLETED = 9;
+  DEPOSIT_STATUS_REORG_REVERSED = 10;
+  DEPOSIT_STATUS_REJECTED_INVALID = 11;
+}
+
+enum SweepStatus {
+  SWEEP_STATUS_UNSPECIFIED = 0;
+  SWEEP_STATUS_PENDING = 1;
+  SWEEP_STATUS_SIGNING = 2;
+  SWEEP_STATUS_BROADCAST = 3;
+  SWEEP_STATUS_CONFIRMED = 4;
+  SWEEP_STATUS_FAILED = 5;
+}
+
+message GenerateDepositAddressRequest {
+  string user_id = 1;
+  BlockchainNetwork network = 2;
+  string correlation_id = 3;
+}
+
+message GenerateDepositAddressResponse {
+  string address = 1;
+  BlockchainNetwork network = 2;
+  string memo_or_tag = 3;
+  int64 min_deposit_raw = 4; // Raw 6 decimals (e.g. 10000000 = 10 USDT)
+  int64 expires_at_unix = 5;
+}
+
+message GetDepositStatusRequest {
+  string deposit_id = 1;
+  string tx_hash = 2;
+  BlockchainNetwork network = 3;
+}
+
+message GetDepositStatusResponse {
+  string deposit_id = 1;
+  string user_id = 2;
+  BlockchainNetwork network = 3;
+  string tx_hash = 4;
+  string from_address = 5;
+  string to_address = 6;
+  string amount_raw = 7;
+  double amount_formatted = 8;
+  uint64 current_confirmations = 9;
+  uint64 required_confirmations = 10;
+  DepositStatus status = 11;
+  string aml_risk_score = 12;
+  string besu_mint_tx_hash = 13;
+  int64 detected_at_unix = 14;
+  int64 confirmed_at_unix = 15;
+}
+
+message ListUserDepositsRequest {
+  string user_id = 1;
+  BlockchainNetwork network = 2;
+  DepositStatus status_filter = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListUserDepositsResponse {
+  repeated GetDepositStatusResponse deposits = 1;
+  string next_page_token = 2;
+  int64 total_count = 3;
+}
+
+message SimulateDepositVerificationRequest {
+  BlockchainNetwork network = 1;
+  string tx_hash = 2;
+}
+
+message SimulateDepositVerificationResponse {
+  bool is_valid = 1;
+  string token_contract = 2;
+  string from_address = 3;
+  string to_address = 4;
+  string amount_raw = 5;
+  bool is_assigned_user_address = 6;
+  string error_message = 7;
+}
+
+message TriggerVaultSweepRequest {
+  BlockchainNetwork network = 1;
+  string sweep_from_address = 2;
+  string destination_vault_address = 3;
+  string min_amount_raw = 4;
+  string requested_by_operator_id = 5;
+}
+
+message TriggerVaultSweepResponse {
+  string sweep_job_id = 1;
+  SweepStatus status = 2;
+  string estimated_sweep_amount_raw = 3;
+}
+
+message GetVaultBalanceRequest {
+  BlockchainNetwork network = 1;
+  string address = 2;
+}
+
+message GetVaultBalanceResponse {
+  string address = 1;
+  BlockchainNetwork network = 2;
+  string balance_raw = 3;
+  double balance_formatted = 4;
+  int64 last_updated_block = 5;
+}

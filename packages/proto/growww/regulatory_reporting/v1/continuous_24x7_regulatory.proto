@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package growww.regulatory_reporting.v1;
+
+option go_package = "github.com/growww/services/continuous-regulatory-reporting/gen/v1;reportingv1";
+
+service ContinuousRegulatoryReportingService {
+  rpc TriggerContinuousFiling (TriggerFilingRequest) returns (TriggerFilingResponse);
+  rpc GetFilingStatus (FilingStatusRequest) returns (FilingStatusResponse);
+  rpc VerifyRegulatoryPayload (VerifyPayloadRequest) returns (VerifyPayloadResponse);
+  rpc GetLrsQuotaStatus (LrsQuotaRequest) returns (LrsQuotaResponse);
+}
+
+enum RegulatorTarget {
+  REGULATOR_UNSPECIFIED = 0;
+  REGULATOR_SEBI = 1;
+  REGULATOR_RBI = 2;
+  REGULATOR_IFSCA = 3;
+}
+
+enum FilingFrequency {
+  FREQ_STREAMING_REALTIME = 0;
+  FREQ_HOURLY = 1;
+  FREQ_DAILY_ROLLING = 2;
+  FREQ_MONTHLY_STATUTORY = 3;
+}
+
+message TriggerFilingRequest {
+  RegulatorTarget regulator = 1;
+  string report_code = 2; // e.g., SEBI_TRADE_FEED_V1, RBI_FETERS_24X7, IFSCA_CAR_HOURLY
+  int64 window_start_utc = 3;
+  int64 window_end_utc = 4;
+  bool is_automated = 5;
+}
+
+message TriggerFilingResponse {
+  string filing_id = 1;
+  string status = 2; // COMPILING / SIGNED / DISPATCHED / ACKNOWLEDGED
+  int64 records_included = 3;
+  string tracking_number = 4;
+}
+
+message FilingStatusRequest {
+  string filing_id = 1;
+}
+
+message FilingStatusResponse {
+  string filing_id = 1;
+  RegulatorTarget regulator = 2;
+  string report_code = 3;
+  string status = 4;
+  string payload_sha256 = 5;
+  string digital_signature_thumbprint = 6;
+  string blockchain_merkle_root = 7;
+  string regulatory_ack_receipt = 8;
+  int64 submitted_at_utc = 9;
+  int64 acknowledged_at_utc = 10;
+  string worm_storage_uri = 11;
+}
+
+message VerifyPayloadRequest {
+  string raw_payload = 1;
+  string schema_type = 2; // XML / XBRL / ISO20022
+}
+
+message VerifyPayloadResponse {
+  bool is_valid = 1;
+  repeated string validation_errors = 2;
+}
+
+message LrsQuotaRequest {
+  string investor_pan_hash = 1;
+  int32 fiscal_year = 2;
+}
+
+message LrsQuotaResponse {
+  string investor_pan_hash = 1;
+  double total_utilized_usd = 2;
+  double remaining_quota_usd = 3;
+  double statutory_limit_usd = 4; // 250,000.00
+  bool is_quota_exceeded = 5;
+}

@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package growww.common.v1;
+
+option go_package = "github.com/growww/proto/gen/go/common/v1;commonv1";
+option java_package = "com.growww.proto.common.v1";
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_VALIDATION_FAILED = 1001;
+  ERROR_CODE_UNAUTHENTICATED = 1002;
+  ERROR_CODE_PERMISSION_DENIED = 1003;
+  ERROR_CODE_NOT_FOUND = 1004;
+  ERROR_CODE_ALREADY_EXISTS = 1005;
+  ERROR_CODE_INSUFFICIENT_FUNDS = 2001;
+  ERROR_CODE_KYC_REQUIRED = 2002;
+  ERROR_CODE_MARKET_CLOSED = 3001;
+  ERROR_CODE_ORDER_REJECTED = 3002;
+  ERROR_CODE_CUSTODY_LOCK_FAILED = 4001;
+  ERROR_CODE_LEDGER_REVERTED = 5001;
+  ERROR_CODE_RATE_LIMITED = 9001;
+  ERROR_CODE_INTERNAL_ERROR = 9999;
+}
+
+message FieldViolation {
+  string field = 1;
+  string description = 2;
+  string constraint = 3;
+}
+
+message ErrorResponse {
+  ErrorCode error_code = 1;
+  string message = 2;
+  string request_id = 3;
+  int64 timestamp = 4;
+  repeated FieldViolation field_violations = 5;
+  map<string, string> metadata = 6;
+}

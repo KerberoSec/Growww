@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package growww.replay.v1;
+
+option go_package = "github.com/growww/proto/gen/go/replay/v1;replayv1";
+
+enum ReplaySessionState {
+  REPLAY_SESSION_STATE_UNSPECIFIED = 0;
+  REPLAY_SESSION_STATE_INITIALIZING = 1;
+  REPLAY_SESSION_STATE_BUFFERING = 2;
+  REPLAY_SESSION_STATE_PLAYING = 3;
+  REPLAY_SESSION_STATE_PAUSED = 4;
+  REPLAY_SESSION_STATE_SEEKING = 5;
+  REPLAY_SESSION_STATE_STEPPING = 6;
+  REPLAY_SESSION_STATE_COMPLETED = 7;
+  REPLAY_SESSION_STATE_ABORTED = 8;
+}
+
+enum ReplaySpeed {
+  REPLAY_SPEED_UNSPECIFIED = 0;
+  REPLAY_SPEED_STEP_SINGLE_TICK = 1;  // Advance one tick on command
+  REPLAY_SPEED_0_1X = 2;              // 10x Slow Motion
+  REPLAY_SPEED_0_5X = 3;              // 2x Slow Motion
+  REPLAY_SPEED_1X = 4;                // Real-Time (1:1)
+  REPLAY_SPEED_5X = 5;                // 5x Accelerated
+  REPLAY_SPEED_10X = 6;               // 10x Accelerated
+  REPLAY_SPEED_50X = 7;               // 50x Accelerated
+  REPLAY_SPEED_100X = 8;              // 100x Accelerated
+  REPLAY_SPEED_500X = 9;              // 500x Accelerated
+  REPLAY_SPEED_1000X = 10;            // 1000x Accelerated
+  REPLAY_SPEED_UNCONSTRAINED = 11;    // Maximum Throughput (Dry Run)
+}
+
+enum ReplayEventType {
+  REPLAY_EVENT_TYPE_UNSPECIFIED = 0;
+  REPLAY_EVENT_TYPE_L1_QUOTE = 1;
+  REPLAY_EVENT_TYPE_L2_DEPTH_DIFF = 2;
+  REPLAY_EVENT_TYPE_L3_ORDER_ADD = 3;
+  REPLAY_EVENT_TYPE_L3_ORDER_MODIFY = 4;
+  REPLAY_EVENT_TYPE_L3_ORDER_CANCEL = 5;
+  REPLAY_EVENT_TYPE_TRADE_EXECUTION = 6;
+  REPLAY_EVENT_TYPE_AUCTION_INDICATIVE = 7;
+  REPLAY_EVENT_TYPE_CIRCUIT_STATE = 8;
+}
+
+message StartReplayRequest {
+  string session_name = 1;
+  repeated string isins = 2;
+  int64 start_timestamp_ns = 3;
+  int64 end_timestamp_ns = 4;
+  ReplaySpeed initial_speed = 5;
+  string destination_kafka_prefix = 6; // Defaults to "sandbox."
+  bool enable_shared_memory_ipc = 7;
+  bool verify_blockchain_hash_chain = 8;
+}
+
+message StartReplayResponse {
+  string session_id = 1;
+  ReplaySessionState state = 2;
+  int64 total_ticks_in_scope = 3;
+  int64 estimated_duration_seconds = 4;
+  string besu_merkle_root_verified = 5;
+  int64 started_at_ns = 6;
+}
+
+message PauseReplayRequest {
+  string session_id = 1;
+}
+
+message ResumeReplayRequest {
+  string session_id = 1;
+}
+
+message StopReplayRequest {
+  string session_id = 1;
+  string reason = 2;
+}
+
+message SetReplaySpeedRequest {
+  string session_id = 1;
+  ReplaySpeed new_speed = 2;
+}
+
+message SeekReplayRequest {
+  string session_id = 1;
+  oneof seek_target {
+    int64 target_timestamp_ns = 2;
+    uint64 target_sequence_id = 3;
+  }
+}
+
+message StepTickRequest {
+  string session_id = 1;
+  uint32 tick_count = 2; // Number of ticks to step forward (default 1)
+}
+
+message GetReplayStatusRequest {
+  string session_id = 1;
+}
+
+message ReplayStatusResponse {
+  string session_id = 1;
+  ReplaySessionState state = 2;
+  ReplaySpeed current_speed = 3;
+  uint64 current_sequence_id = 4;
+  int64 current_timestamp_ns = 5;
+  uint64 total_ticks_replayed = 6;
+  uint64 total_ticks_remaining = 7;
+  double replay_progress_percent = 8;
+  int64 cumulative_drift_nanoseconds = 9;
+  double actual_replay_speed_multiplier = 10;
+  bool is_tamper_verified = 11;
+}
+
+message StreamReplayEventsRequest {
+  string session_id = 1;
+  repeated string isins = 2;
+  uint32 batch_size = 3;
+}
+
+message ReplayTickFrame {
+  uint64 sequence_id = 1;
+  int64 simulated_timestamp_ns = 2;
+  int64 replayed_at_ns = 3;
+  string isin = 4;
+  ReplayEventType event_type = 5;
+  bytes raw_payload = 6;
+  bytes sha256_cumulative_hash = 7;
+}
+
+message ReplayTickBatch {
+  string session_id = 1;
+  repeated ReplayTickFrame frames = 2;
+}
+
+message TriggerTradeReconstructionRequest {
+  string investigation_case_id = 1;
+  string isin = 2;
+  int64 window_start_timestamp_ns = 3;
+  int64 window_end_timestamp_ns = 4;
+  repeated string suspicious_trader_ids = 5;
+  bool reconcile_blockchain_dvp = 6;
+}
+
+message TradeReconstructionReport {
+  string report_id = 1;
+  string investigation_case_id = 2;
+  string isin = 3;
+  int64 window_start_timestamp_ns = 4;
+  int64 window_end_timestamp_ns = 5;
+  uint64 total_orders_in_window = 6;
+  uint64 total_trades_in_window = 7;
+  uint64 total_turnover_paise = 8;
+  bool blockchain_dvp_reconciled = 9;
+  uint32 dvp_matched_events = 10;
+  uint32 dvp_unmatched_events = 11;
+  string archive_merkle_root = 12;
+  string report_download_uri = 13;
+  int64 generated_at_ns = 14;
+}
+
+service MarketReplayService {
+  rpc StartReplay (StartReplayRequest) returns (StartReplayResponse);
+  rpc PauseReplay (PauseReplayRequest) returns (ReplayStatusResponse);
+  rpc ResumeReplay (ResumeReplayRequest) returns (ReplayStatusResponse);
+  rpc StopReplay (StopReplayRequest) returns (ReplayStatusResponse);
+  rpc SetReplaySpeed (SetReplaySpeedRequest) returns (ReplayStatusResponse);
+  rpc SeekReplay (SeekReplayRequest) returns (ReplayStatusResponse);
+  rpc StepTick (StepTickRequest) returns (ReplayStatusResponse);
+  rpc GetReplayStatus (GetReplayStatusRequest) returns (ReplayStatusResponse);
+  rpc StreamReplayEvents (StreamReplayEventsRequest) returns (stream ReplayTickBatch);
+  rpc TriggerTradeReconstruction (TriggerTradeReconstructionRequest) returns (TradeReconstructionReport);
+}

@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package growww.wallet.v1;
+
+option go_package = "growww/wallet/v1;walletv1";
+
+service WalletService {
+  rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
+  rpc ReserveFunds (ReserveFundsRequest) returns (ReserveFundsResponse);
+  rpc ReleaseFunds (ReleaseFundsRequest) returns (ReleaseFundsResponse);
+  rpc CommitHold (CommitHoldRequest) returns (CommitHoldResponse);
+  rpc CreditDeposit (CreditDepositRequest) returns (CreditDepositResponse);
+}
+
+message GetBalanceRequest {
+  string user_id = 1;
+}
+
+message GetBalanceResponse {
+  string user_id = 1;
+  string currency = 2; // Always "INR"
+  string ledger_balance = 3; // String representation of decimal (e.g., "15000.50")
+  string held_balance = 4;
+  string available_balance = 5;
+  int64 updated_at_unix = 6;
+}
+
+message ReserveFundsRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string order_id = 3;
+  string amount = 4; // Decimal string in INR
+  string purpose = 5; // e.g., "BUY_ORDER_RESERVATION"
+}
+
+message ReserveFundsResponse {
+  string hold_id = 1;
+  string user_id = 2;
+  string held_amount = 3;
+  string remaining_available_balance = 4;
+  int64 expires_at_unix = 5;
+}
+
+message ReleaseFundsRequest {
+  string idempotency_key = 1;
+  string hold_id = 2;
+  string reason = 3;
+}
+
+message ReleaseFundsResponse {
+  bool success = 1;
+  string released_amount = 2;
+  string updated_available_balance = 3;
+}
+
+message CommitHoldRequest {
+  string idempotency_key = 1;
+  string hold_id = 2;
+  string trade_id = 3;
+  string debit_amount = 4;
+  string counterparty_account_id = 5;
+}
+
+message CommitHoldResponse {
+  string journal_entry_id = 1;
+  bool success = 2;
+  string final_balance = 3;
+}
+
+message CreditDepositRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string payment_reference = 3;
+  string amount = 4;
+}
+
+message CreditDepositResponse {
+  string journal_entry_id = 1;
+  string updated_ledger_balance = 2;
+}

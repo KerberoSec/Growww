@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package growww.btc_order.v1;
+
+option go_package = "growww/btc_order/v1;btcorderv1";
+
+// BtcOrderService manages the lifecycle of spot BTC/USDT orders.
+service BtcOrderService {
+  // Place a new spot BTC/USDT order (Market, Limit, Stop-Limit).
+  rpc PlaceBtcOrder (PlaceBtcOrderRequest) returns (PlaceBtcOrderResponse);
+
+  // Cancel an active resting order.
+  rpc CancelBtcOrder (CancelBtcOrderRequest) returns (CancelBtcOrderResponse);
+
+  // Retrieve current state and execution history of an order.
+  rpc GetBtcOrder (GetBtcOrderRequest) returns (GetBtcOrderResponse);
+
+  // List orders for a specific user with pagination and status filters.
+  rpc ListBtcOrders (ListBtcOrdersRequest) returns (ListBtcOrdersResponse);
+
+  // Stream live order updates and execution fills for a user.
+  rpc StreamBtcOrderUpdates (StreamBtcOrderUpdatesRequest) returns (stream BtcOrderUpdate);
+}
+
+enum BtcOrderSide {
+  BTC_ORDER_SIDE_UNSPECIFIED = 0;
+  BTC_ORDER_SIDE_BUY = 1;
+  BTC_ORDER_SIDE_SELL = 2;
+}
+
+enum BtcOrderType {
+  BTC_ORDER_TYPE_UNSPECIFIED = 0;
+  BTC_ORDER_TYPE_LIMIT = 1;
+  BTC_ORDER_TYPE_MARKET = 2;
+  BTC_ORDER_TYPE_STOP_LIMIT = 3;
+}
+
+enum BtcTimeInForce {
+  BTC_TIME_IN_FORCE_UNSPECIFIED = 0;
+  BTC_TIME_IN_FORCE_GTC = 1; // Good-Til-Cancelled
+  BTC_TIME_IN_FORCE_IOC = 2; // Immediate-Or-Cancel
+  BTC_TIME_IN_FORCE_FOK = 3; // Fill-Or-Kill
+}
+
+enum BtcOrderStatus {
+  BTC_ORDER_STATUS_UNSPECIFIED = 0;
+  BTC_ORDER_STATUS_SUBMITTED = 1;
+  BTC_ORDER_STATUS_PENDING_RESERVATION = 2;
+  BTC_ORDER_STATUS_RESERVED = 3;
+  BTC_ORDER_STATUS_ROUTED_TO_ENGINE = 4;
+  BTC_ORDER_STATUS_PARTIALLY_FILLED = 5;
+  BTC_ORDER_STATUS_FILLED = 6;
+  BTC_ORDER_STATUS_PENDING_CANCELLATION = 7;
+  BTC_ORDER_STATUS_CANCELLED = 8;
+  BTC_ORDER_STATUS_REJECTED = 9;
+  BTC_ORDER_STATUS_EXPIRED = 10;
+}
+
+enum BtcStopCondition {
+  BTC_STOP_CONDITION_UNSPECIFIED = 0;
+  BTC_STOP_CONDITION_GE = 1; // Trigger when Mark Price >= Stop Price
+  BTC_STOP_CONDITION_LE = 2; // Trigger when Mark Price <= Stop Price
+}
+
+message PlaceBtcOrderRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string client_order_id = 3;
+  BtcOrderSide side = 4;
+  BtcOrderType order_type = 5;
+  BtcTimeInForce time_in_force = 6;
+  string quantity_btc = 7;     // Fixed-point string (e.g. "0.05000000")
+  string price_usdt = 8;       // Fixed-point string (e.g. "64500.50"), optional for MARKET
+  string stop_price_usdt = 9;  // Required for STOP_LIMIT orders
+  BtcStopCondition stop_condition = 10;
+}
+
+message PlaceBtcOrderResponse {
+  string order_id = 1;
+  string client_order_id = 2;
+  BtcOrderStatus status = 3;
+  string symbol = 4;           // Always "BTC-USDT"
+  BtcOrderSide side = 5;
+  BtcOrderType order_type = 6;
+  string quantity_btc = 7;
+  string price_usdt = 8;
+  string reserved_asset = 9;   // "USDT" for BUY, "BTC" for SELL
+  string reserved_amount = 10;
+  string estimated_fee_usdt = 11;
+  int64 submitted_at_unix_ms = 12;
+}
+
+message CancelBtcOrderRequest {
+  string order_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message CancelBtcOrderResponse {
+  string order_id = 1;
+  bool cancellation_accepted = 2;
+  BtcOrderStatus status = 3;
+  string released_asset = 4;
+  string released_amount = 5;
+  int64 cancelled_at_unix_ms = 6;
+}
+
+message GetBtcOrderRequest {
+  string order_id = 1;
+  string user_id = 2;
+}
+
+message BtcExecutionDetail {
+  string execution_id = 1;
+  string trade_id = 2;
+  string match_price_usdt = 3;
+  string match_quantity_btc = 4;
+  string match_quote_usdt = 5;
+  string fee_usdt = 6;
+  string besu_settlement_tx_hash = 7;
+  int64 executed_at_unix_ms = 8;
+}
+
+message GetBtcOrderResponse {
+  string order_id = 1;
+  string client_order_id = 2;
+  string user_id = 3;
+  string symbol = 4;
+  BtcOrderSide side = 5;
+  BtcOrderType order_type = 6;
+  BtcTimeInForce time_in_force = 7;
+  BtcOrderStatus status = 8;
+  string price_usdt = 9;
+  string quantity_btc = 10;
+  string filled_quantity_btc = 11;
+  string remaining_quantity_btc = 12;
+  string average_fill_price_usdt = 13;
+  string cumulative_fee_usdt = 14;
+  string rejection_reason = 15;
+  repeated BtcExecutionDetail executions = 16;
+  int64 created_at_unix_ms = 17;
+  int64 updated_at_unix_ms = 18;
+}
+
+message ListBtcOrdersRequest {
+  string user_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  repeated BtcOrderStatus status_filter = 4;
+  BtcOrderSide side_filter = 5;
+  int64 from_timestamp_unix_ms = 6;
+  int64 to_timestamp_unix_ms = 7;
+}
+
+message ListBtcOrdersResponse {
+  repeated GetBtcOrderResponse orders = 1;
+  string next_page_token = 2;
+}
+
+message StreamBtcOrderUpdatesRequest {
+  string user_id = 1;
+}
+
+message BtcOrderUpdate {
+  string order_id = 1;
+  string client_order_id = 2;
+  BtcOrderStatus status = 3;
+  string filled_quantity_btc = 4;
+  string remaining_quantity_btc = 5;
+  string latest_match_price_usdt = 6;
+  string cumulative_fee_usdt = 7;
+  int64 updated_at_unix_ms = 8;
+}

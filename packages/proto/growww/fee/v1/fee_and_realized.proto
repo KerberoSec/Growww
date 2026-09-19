@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package growww.fee.v1;
+
+option go_package = "growww/fee/v1;feev1";
+
+service FeeEngineService {
+  rpc CalculateTransactionFeeAndTax (CalculateFeeRequest) returns (CalculateFeeResponse);
+  rpc GetFeeBreakdown (GetFeeBreakdownRequest) returns (GetFeeBreakdownResponse);
+}
+
+message CalculateFeeRequest {
+  string user_id = 1;
+  string trade_id = 2;
+  string isin = 3;
+  string trade_side = 4; // BUY or SELL
+  string quantity = 5; // Decimal string
+  string execution_price_inr = 6;
+}
+
+message TreasurySplitDto {
+  string treasury_operational_inr = 1; // Governed by FeeController (0.00% at launch)
+  string core_sgf_inr = 2;             // Governed by FeeController (0.00% at launch)
+  string ipf_inr = 3;                  // Governed by FeeController (0.00% at launch)
+}
+
+message TaxComplianceGainDto {
+  string cost_basis_inr = 1;
+  string realized_capital_gain_inr = 2;
+  string gain_classification = 3; // STCG_SEC_111A, LTCG_SEC_112A, LOSS
+  int32 holding_period_days = 4;
+}
+
+message CalculateFeeResponse {
+  string trade_id = 1;
+  string gross_turnover_inr = 2;
+  string platform_fee_inr = 3; // Exactly 0.00% (Zero Fee) (0 bps (0.00% fee at launch)) of gross turnover
+  TreasurySplitDto treasury_split = 4;
+  string statutory_charges_inr = 5;
+  string gst_on_fee_inr = 6;
+  TaxComplianceGainDto tax_compliance_gain = 7;
+  string computation_proof_hash = 8;
+}
+
+message GetFeeBreakdownRequest {
+  string trade_id = 1;
+}
+
+message ItemizedFeeDto {
+  string fee_name = 1; // PLATFORM_FEE, STT, STAMP_DUTY, EXCHANGE_TURNOVER, SEBI_FEE, GST
+  string amount_inr = 2;
+  string rate_applied = 3;
+}
+
+message GetFeeBreakdownResponse {
+  string trade_id = 1;
+  string gross_turnover_inr = 2;
+  string platform_fee_inr = 3;
+  TreasurySplitDto treasury_split = 4;
+  repeated ItemizedFeeDto statutory_fees = 5;
+  TaxComplianceGainDto tax_compliance_gain = 6;
+  int64 calculated_at_unix = 7;
+}

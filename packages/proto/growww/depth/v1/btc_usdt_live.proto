@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package growww.depth.v1;
+
+option go_package = "growww/depth/v1;depthv1";
+
+// Individual price level in the order book ladder
+message PriceLevel {
+  // Price scaled to fixed-point integer (e.g., satoshis or micro-units)
+  int64 price_raw = 1;
+  // Floating-point string representation for direct UI rendering
+  string price = 2;
+  // Aggregated volume available at this price level
+  int64 quantity_raw = 3;
+  string quantity = 4;
+  // Number of resting orders contributing to this price level (L2 depth)
+  int32 order_count = 5;
+}
+
+// Full snapshot of the order book ladder
+message OrderBookSnapshot {
+  string symbol = 1; // e.g. "BTC/USDT" or "BTC/USDT-DEMO"
+  int64 last_update_id = 2; // Monotonically increasing sequence ID
+  int64 timestamp_ms = 3; // Timestamp of snapshot generation
+  repeated PriceLevel bids = 4; // Sorted descending by price
+  repeated PriceLevel asks = 5; // Sorted ascending by price
+  uint32 checksum = 6; // CRC32 checksum of top 10 bids/asks
+  bool is_demo = 7; // Flag indicating production vs sandbox liquidity
+}
+
+// Incremental 100ms conflated delta update
+message OrderBookDelta {
+  string symbol = 1;
+  int64 first_update_id = 2; // Sequence ID of first update in batch
+  int64 last_update_id = 3; // Sequence ID of last update in batch
+  int64 timestamp_ms = 4;
+  repeated PriceLevel updated_bids = 5; // Quantity = 0 indicates price level removal
+  repeated PriceLevel updated_asks = 6;
+  uint32 checksum = 7; // CRC32 checksum of resulting top 10 bids/asks
+  bool is_demo = 8;
+}
+
+// Client WebSocket subscription message
+message DepthSubscriptionRequest {
+  enum Action {
+    ACTION_UNSPECIFIED = 0;
+    SUBSCRIBE = 1;
+    UNSUBSCRIBE = 2;
+  }
+  enum Format {
+    FORMAT_UNSPECIFIED = 0;
+    PROTOBUF_BINARY = 1;
+    JSON_TEXT = 2;
+  }
+  Action action = 1;
+  string channel = 2; // e.g. "btc_usdt@depth20@100ms"
+  Format preferred_format = 3;
+  int32 depth_levels = 4; // Requested depth: 5, 10, 20, 50, or 100
+}
+
+// Server response acknowledging subscription
+message DepthSubscriptionResponse {
+  bool success = 1;
+  string channel = 2;
+  string message = 3;
+  int64 timestamp_ms = 4;
+}

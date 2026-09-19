@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package growww.advisor.v1;
+
+option go_package = "github.com/growww/proto/gen/go/advisor/v1;advisorv1";
+
+service FinancialAdvisorService {
+  rpc StreamFinancialQuery (FinancialQueryRequest) returns (stream FinancialQueryChunk);
+  rpc SimulateScenarioShock (ScenarioShockRequest) returns (ScenarioShockResponse);
+  rpc SummarizeDocument (SummarizeDocumentRequest) returns (SummarizeDocumentResponse);
+  rpc GetProofOfReserveExplanation (ReserveExplanationRequest) returns (ReserveExplanationResponse);
+}
+
+message FinancialQueryRequest {
+  string session_id = 1;
+  string user_id = 2; // Pseudonymized UUID
+  string query_text = 3;
+  string current_screen_context = 4; // e.g. "SECURITY_DETAIL", "PORTFOLIO", "WALLET"
+  string isin_context = 5; // Optional ISIN for asset-specific grounding
+  bool enable_voice_response = 6;
+}
+
+message CitationMetadata {
+  string source_title = 1;
+  string source_url = 2;
+  string document_type = 3; // "SEBI_CIRCULAR", "PROSPECTUS", "BESU_PROOF_OF_RESERVE"
+  string on_chain_tx_hash = 4;
+}
+
+message InteractiveWidgetPayload {
+  string widget_type = 1; // "CUSTODY_FLOWCHART", "SCENARIO_SLIDER", "FEE_BREAKDOWN_CARD"
+  string json_parameters = 2;
+}
+
+message FinancialQueryChunk {
+  string delta_text = 1;
+  bool is_complete = 2;
+  bool guardrail_intercepted = 3;
+  repeated CitationMetadata citations = 4;
+  InteractiveWidgetPayload embedded_widget = 5;
+  int64 timestamp_unix_ms = 6;
+}
+
+message ScenarioShockRequest {
+  string user_id = 1;
+  double interest_rate_delta_bps = 2; // e.g. +100.0 bps
+  double equity_market_shock_pct = 3; // e.g. -10.0%
+  double commodity_shock_pct = 4; // e.g. +15.0%
+}
+
+message AssetShockImpact {
+  string asset_class = 1; // "EQUITY", "DEBT", "COMMODITY"
+  double current_allocation_pct = 2;
+  double simulated_pnl_pct = 3;
+  double simulated_impact_inr = 4;
+  string educational_rationale = 5;
+}
+
+message ScenarioShockResponse {
+  repeated AssetShockImpact asset_impacts = 1;
+  double net_portfolio_simulated_pnl_pct = 2;
+  string risk_summary_markdown = 3;
+  string mandatory_disclaimer = 4;
+}
+
+message SummarizeDocumentRequest {
+  string document_id = 1;
+  string document_type = 2; // "DRHP", "ANNUAL_REPORT", "SCHEME_INFORMATION_DOCUMENT"
+  repeated string focus_areas = 3; // "RISK_FACTORS", "PROMOTER_HOLDING", "USE_OF_PROCEEDS"
+}
+
+message SummarizeDocumentResponse {
+  string executive_summary = 1;
+  repeated string key_risk_factors = 2;
+  string promoter_holding_analysis = 3;
+  string financial_health_overview = 4;
+  string document_sha256 = 5;
+}
+
+message ReserveExplanationRequest {
+  string isin = 1;
+  string asset_symbol = 2;
+}
+
+message ReserveExplanationResponse {
+  string asset_symbol = 1;
+  string depository_name = 2; // "NSDL" or "CDSL"
+  string custody_account_reference = 3;
+  double backing_ratio_percentage = 4; // Always 100.0%
+  string latest_merkle_root = 5;
+  uint64 besu_block_height = 6;
+  string explanation_markdown = 7;
+}

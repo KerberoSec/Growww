@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package growww.bundler.v1;
+
+option go_package = "github.com/growww/proto/gen/go/bundler/v1;bundlerv1";
+
+message SponsorUserOpRequest {
+  string sender_address = 1;
+  uint64 nonce = 2;
+  bytes init_code = 3;
+  bytes call_data = 4;
+  uint64 call_gas_limit = 5;
+  uint64 verification_gas_limit = 6;
+  uint64 pre_verification_gas = 7;
+  uint64 max_fee_per_gas = 8;
+  uint64 max_priority_fee_per_gas = 9;
+  string isin = 10;
+  uint64 trade_turnover_paise = 11;
+}
+
+message SponsorUserOpResponse {
+  bool sponsored = 1;
+  string paymaster_address = 2;
+  bytes paymaster_and_data = 3;
+  uint64 valid_until = 4;
+  uint64 valid_after = 5;
+  string rejection_reason = 6;
+}
+
+message UserOpStatusRequest {
+  string user_op_hash = 1;
+}
+
+message UserOpStatusResponse {
+  string user_op_hash = 1;
+  string status = 2; // PENDING_MEMPOOL, BUNDLED, MINED_SUCCESS, REVERTED, DROPPED
+  string transaction_hash = 3;
+  uint64 block_number = 4;
+  uint64 actual_gas_cost_wei = 5;
+  uint64 actual_gas_used = 6;
+  int64 mined_at_timestamp_ns = 7;
+}
+
+message BundlerPoolTelemetryResponse {
+  uint32 pending_mempool_size = 1;
+  uint64 total_ops_processed = 2;
+  uint64 total_bundles_mined = 3;
+  uint64 paymaster_deposit_remaining_wei = 4;
+  uint64 treasury_allocated_gas_budget_wei = 5;
+}
+
+message EmptyRequest {}
+
+service AABundlerService {
+  rpc RequestSponsorship (SponsorUserOpRequest) returns (SponsorUserOpResponse);
+  rpc GetUserOpStatus (UserOpStatusRequest) returns (UserOpStatusResponse);
+  rpc GetBundlerTelemetry (EmptyRequest) returns (BundlerPoolTelemetryResponse);
+}

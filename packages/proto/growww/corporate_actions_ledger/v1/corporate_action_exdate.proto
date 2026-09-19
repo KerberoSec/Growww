@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package growww.corporate_actions_ledger.v1;
+
+option go_package = "growww/corporate_actions_ledger/v1;corporateactionsledgerv1";
+
+service CorporateActionsLedgerService {
+  rpc ScheduleCorporateAction (ScheduleCorporateActionRequest) returns (ScheduleCorporateActionResponse);
+  rpc TriggerExDatePurge (TriggerExDatePurgeRequest) returns (TriggerExDatePurgeResponse);
+  rpc RebaseQueuedOrders (RebaseQueuedOrdersRequest) returns (RebaseQueuedOrdersResponse);
+  rpc GetEBCEBalance (GetEBCEBalanceRequest) returns (GetEBCEBalanceResponse);
+  rpc ProcessDepositoryAllotment (ProcessDepositoryAllotmentRequest) returns (ProcessDepositoryAllotmentResponse);
+  rpc DeploySpinoffToken (DeploySpinoffTokenRequest) returns (DeploySpinoffTokenResponse);
+  rpc GetCorporateActionAuditTrail (GetAuditTrailRequest) returns (GetAuditTrailResponse);
+}
+
+enum CorporateActionType {
+  CORPORATE_ACTION_TYPE_UNSPECIFIED = 0;
+  CORPORATE_ACTION_TYPE_STOCK_SPLIT = 1;
+  CORPORATE_ACTION_TYPE_BONUS_ISSUE = 2;
+  CORPORATE_ACTION_TYPE_RIGHTS_ISSUE = 3;
+  CORPORATE_ACTION_TYPE_DEMERGER_SPINOFF = 4;
+  CORPORATE_ACTION_TYPE_SPECIAL_CASH_DIVIDEND = 5;
+}
+
+enum EBCEStatus {
+  EBCE_STATUS_UNSPECIFIED = 0;
+  EBCE_STATUS_DECLARED = 1;
+  EBCE_STATUS_ENTITLED_ESCROW = 2;
+  EBCE_STATUS_DEPOSITORY_PENDING = 3;
+  EBCE_STATUS_RECONCILED = 4;
+  EBCE_STATUS_CONVERTED_UNLOCKED = 5;
+  EBCE_STATUS_CANCELLED_VOID = 6;
+}
+
+message ScheduleCorporateActionRequest {
+  string isin = 1;
+  CorporateActionType action_type = 2;
+  string ex_date = 3; // YYYY-MM-DD
+  string record_date = 4; // YYYY-MM-DD
+  string ratio_numerator = 5; // e.g. "10" for 10:1 split, "1" for 1:1 bonus
+  string ratio_denominator = 6; // e.g. "1" for 10:1 split, "1" for 1:1 bonus
+  string cash_dividend_amount_inr = 7;
+  string spinoff_entity_name = 8;
+  string spinoff_isin = 9;
+  string regulatory_filing_ref = 10;
+  string maker_user_id = 11;
+}
+
+message ScheduleCorporateActionResponse {
+  string corporate_action_id = 1;
+  string status = 2;
+  int64 purge_scheduled_unix_ns = 3;
+}
+
+message TriggerExDatePurgeRequest {
+  string corporate_action_id = 1;
+  string isin = 2;
+  bool force_override = 3;
+  string operator_id = 4;
+}
+
+message TriggerExDatePurgeResponse {
+  string purge_execution_id = 1;
+  int64 orders_purged_count = 2;
+  int64 orders_rebased_count = 3;
+  int64 duration_microseconds = 4;
+  string status = 5;
+}
+
+message RebaseQueuedOrdersRequest {
+  string corporate_action_id = 1;
+  string isin = 2;
+  CorporateActionType action_type = 3;
+  string ratio_numerator = 4;
+  string ratio_denominator = 5;
+  string cash_dividend_amount_inr = 6;
+}
+
+message RebaseQueuedOrdersResponse {
+  string corporate_action_id = 1;
+  int64 total_orders_evaluated = 2;
+  int64 orders_rebased_count = 3;
+  int64 orders_cancelled_count = 4;
+}
+
+message GetEBCEBalanceRequest {
+  string user_id = 1;
+  string isin = 2;
+}
+
+message GetEBCEBalanceResponse {
+  string user_id = 1;
+  string isin = 2;
+  string ebce_balance = 3; // 18-decimal fixed-point string
+  EBCEStatus status = 4;
+  string pending_allotment_units = 5;
+  int64 record_date_snapshot_timestamp_unix_ns = 6;
+  string merkle_proof_hash = 7;
+}
+
+message ProcessDepositoryAllotmentRequest {
+  string corporate_action_id = 1;
+  string isin = 2;
+  string depository_source = 3; // NSDL or CDSL
+  string batch_reference_id = 4;
+  string total_allotted_units = 5;
+  string depository_account_ref = 6;
+  string checker_user_id = 7;
+}
+
+message ProcessDepositoryAllotmentResponse {
+  string reconciliation_id = 1;
+  bool is_matched = 2;
+  string matched_units = 3;
+  string discrepancy_units = 4;
+  int64 accounts_unlocked_count = 5;
+  string status = 6;
+}
+
+message DeploySpinoffTokenRequest {
+  string corporate_action_id = 1;
+  string parent_isin = 2;
+  string spinoff_isin = 3;
+  string token_name = 4;
+  string token_symbol = 5;
+  uint32 decimals = 6;
+  string initial_supply = 7;
+  string spinoff_ratio_numerator = 8;
+  string spinoff_ratio_denominator = 9;
+}
+
+message DeploySpinoffTokenResponse {
+  string spinoff_token_address = 1;
+  string deployment_tx_hash = 2;
+  int64 block_number = 3;
+  string initial_entitlement_merkle_root = 4;
+}
+
+message GetAuditTrailRequest {
+  string corporate_action_id = 1;
+}
+
+message AuditRecord {
+  string audit_id = 1;
+  string event_type = 2;
+  string action_summary = 3;
+  string actor_id = 4;
+  string payload_json = 5;
+  int64 timestamp_unix_ns = 6;
+}
+
+message GetAuditTrailResponse {
+  string corporate_action_id = 1;
+  repeated AuditRecord audit_records = 2;
+}

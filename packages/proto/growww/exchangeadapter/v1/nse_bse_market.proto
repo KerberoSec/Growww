@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package growww.exchangeadapter.v1;
+
+option go_package = "growww/exchangeadapter/v1;exchangeadapterv1";
+
+service ExchangeAdapterService {
+  rpc GetNationalBestBidOffer (GetNBBORequest) returns (GetNBBOResponse);
+  rpc RouteSmartOrder (RouteSmartOrderRequest) returns (RouteSmartOrderResponse);
+  rpc GetSecurityMasterByISIN (GetSecurityMasterRequest) returns (GetSecurityMasterResponse);
+  rpc IngestBhavcopyManual (IngestBhavcopyManualRequest) returns (IngestBhavcopyManualResponse);
+  rpc GetMarketSessionStatus (GetMarketSessionStatusRequest) returns (GetMarketSessionStatusResponse);
+}
+
+message QuoteLevel {
+  string price = 1;      // Formatted in INR with 4 decimal places
+  string quantity = 2;   // Formatted to 6 decimal places (micro-shares)
+  int32 order_count = 3;
+}
+
+message VenueQuote {
+  string venue = 1;       // "NSE" or "BSE"
+  QuoteLevel best_bid = 2;
+  QuoteLevel best_ask = 3;
+  string ltp = 4;
+  string vwap = 5;
+  int64 total_volume = 6;
+  int64 timestamp_unix_nanos = 7;
+}
+
+message GetNBBORequest {
+  string isin = 1;
+}
+
+message GetNBBOResponse {
+  string isin = 1;
+  string trading_symbol = 2;
+  VenueQuote nse_quote = 3;
+  VenueQuote bse_quote = 4;
+  QuoteLevel national_best_bid = 5;
+  string national_best_bid_venue = 6;
+  QuoteLevel national_best_ask = 7;
+  string national_best_ask_venue = 8;
+  string spread = 9;
+  int64 computed_at_unix_nanos = 10;
+}
+
+message RouteSmartOrderRequest {
+  string parent_order_id = 1;
+  string isin = 2;
+  string side = 3; // "BUY" or "SELL"
+  string order_type = 4; // "LIMIT", "MARKET", "IOC"
+  string quantity = 5;
+  string limit_price = 6;
+  string time_in_force = 7; // "DAY", "IOC", "FOK"
+  string routing_preference = 8; // "BEST_PRICE", "FASTEST_FILL", "MINIMUM_FEE"
+}
+
+message VenueOrderAllocation {
+  string venue = 1; // "NSE" or "BSE"
+  string allocated_quantity = 2;
+  string allocated_limit_price = 3;
+  string child_order_id = 4;
+  string exchange_order_id = 5;
+  string status = 6; // "PENDING", "FILLED", "REJECTED"
+}
+
+message RouteSmartOrderResponse {
+  string parent_order_id = 1;
+  string isin = 2;
+  string routing_strategy_applied = 3;
+  repeated VenueOrderAllocation allocations = 4;
+  string executed_weighted_average_price = 5;
+  string price_improvement_paisa = 6;
+  int64 execution_latency_micros = 7;
+  string overall_status = 8;
+}
+
+message GetSecurityMasterRequest {
+  string isin = 1;
+}
+
+message GetSecurityMasterResponse {
+  string isin = 1;
+  string trading_symbol = 2;
+  string company_name = 3;
+  string series = 4;
+  string tick_size = 5;
+  int32 lot_size = 6;
+  string upper_circuit_limit = 7;
+  string lower_circuit_limit = 8;
+  string nse_token_id = 9;
+  string bse_scrip_code = 10;
+  bool is_trade_for_trade = 11;
+  bool is_tokenized_247_active = 12;
+}
+
+message IngestBhavcopyManualRequest {
+  string exchange_code = 1; // "NSE" or "BSE"
+  string record_date = 2;   // "YYYY-MM-DD"
+  bool force_reprocess = 3;
+}
+
+message IngestBhavcopyManualResponse {
+  string exchange_code = 1;
+  string record_date = 2;
+  int64 total_records_ingested = 3;
+  string file_checksum_sha256 = 4;
+  int64 processing_time_ms = 5;
+  string status = 6;
+}
+
+message GetMarketSessionStatusRequest {
+  string exchange_code = 1; // "NSE", "BSE", or "ALL"
+}
+
+message GetMarketSessionStatusResponse {
+  string current_phase = 1; // "PRE_OPEN", "CONTINUOUS", "POST_CLOSE", "OFF_MARKET"
+  bool is_regular_market_open = 2;
+  bool is_tokenized_247_active = 3;
+  int64 next_phase_transition_unix = 4;
+  string active_reference_price_source = 5; // "LIVE_NBBO" or "BHAVCOPY_CLOSE"
+}

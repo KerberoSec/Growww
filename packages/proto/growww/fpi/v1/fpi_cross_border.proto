@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package growww.fpi.v1;
+
+option go_package = "github.com/growww/proto/gen/go/fpi/v1;fpiv1";
+
+enum FpiCategory {
+  FPI_CATEGORY_UNSPECIFIED = 0;
+  FPI_CATEGORY_I = 1;  // Sovereign funds, central banks, pension funds
+  FPI_CATEGORY_II = 2; // Regulated funds, university funds, family offices
+}
+
+enum FpiValidationResult {
+  FPI_VALIDATION_RESULT_UNSPECIFIED = 0;
+  FPI_VALIDATION_RESULT_APPROVED = 1;
+  FPI_VALIDATION_RESULT_REJECTED_SINGLE_CAP_BREACH = 2;
+  FPI_VALIDATION_RESULT_REJECTED_SECTORAL_CAP_BREACH = 3;
+  FPI_VALIDATION_RESULT_REJECTED_KYC_EXPIRED = 4;
+}
+
+message ValidateFpiOrderHeadroomRequest {
+  string order_id = 1;
+  string fpi_entity_id = 2;
+  string isin = 3;
+  string order_side = 4; // BUY or SELL
+  uint64 order_quantity_e6 = 5;
+  uint64 limit_price_paise = 6;
+}
+
+message ValidateFpiOrderHeadroomResponse {
+  FpiValidationResult result = 1;
+  bool is_allowed = 2;
+  uint64 current_entity_holding_e6 = 3;
+  uint64 max_allowable_entity_holding_e6 = 4;
+  uint64 current_sectoral_foreign_holding_e6 = 5;
+  uint64 max_allowable_sectoral_holding_e6 = 6;
+  uint64 total_paid_up_capital_shares_e6 = 7;
+  string rejection_reason = 8;
+  int64 checked_at_ns = 9;
+}
+
+message SectoralCapUpdate {
+  string isin = 1;
+  string company_name = 2;
+  uint64 total_paid_up_shares_e6 = 3;
+  uint32 sectoral_cap_bps = 4; // e.g. 7400 for 74.00%
+  uint32 aggregate_fpi_limit_bps = 5;
+  bool is_red_flag_active = 6;
+  int64 effective_timestamp = 7;
+}
+
+service FpiComplianceService {
+  rpc ValidateFpiOrderHeadroom (ValidateFpiOrderHeadroomRequest) returns (ValidateFpiOrderHeadroomResponse);
+  rpc UpdateSectoralCap (SectoralCapUpdate) returns (ValidateFpiOrderHeadroomResponse);
+}

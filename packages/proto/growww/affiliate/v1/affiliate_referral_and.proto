@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package growww.affiliate.v1;
+
+option go_package = "growww/affiliate/v1;affiliatev1";
+
+service AffiliateService {
+  rpc RegisterAffiliate (RegisterAffiliateRequest) returns (AffiliateProfile);
+  rpc GenerateTrackingLink (GenerateTrackingLinkRequest) returns (TrackingLinkResponse);
+  rpc TrackAttribution (TrackAttributionRequest) returns (TrackAttributionResponse);
+  rpc GetAffiliateHierarchy (GetAffiliateHierarchyRequest) returns (AffiliateHierarchyResponse);
+  rpc GetCommissionStatement (GetCommissionStatementRequest) returns (CommissionStatementResponse);
+  rpc TriggerSettlementEpoch (TriggerSettlementEpochRequest) returns (SettlementEpochSummary);
+  rpc UpdateAffiliateContract (UpdateAffiliateContractRequest) returns (AffiliateContract);
+}
+
+enum AffiliateTier {
+  AFFILIATE_TIER_UNSPECIFIED = 0;
+  AFFILIATE_TIER_BRONZE = 1;      // Base Tier: 20% Direct Rebate
+  AFFILIATE_TIER_SILVER = 2;      // Trailing Turnover >= 10 Cr: 25% Direct Rebate
+  AFFILIATE_TIER_GOLD = 3;        // Trailing Turnover >= 50 Cr: 30% Direct Rebate
+  AFFILIATE_TIER_PLATINUM = 4;    // Trailing Turnover >= 250 Cr: 35% Direct Rebate
+  AFFILIATE_TIER_DIAMOND = 5;     // Trailing Turnover >= 1000 Cr: 40% Direct Rebate
+}
+
+enum AffiliateStatus {
+  AFFILIATE_STATUS_UNSPECIFIED = 0;
+  AFFILIATE_STATUS_PENDING_APPROVAL = 1;
+  AFFILIATE_STATUS_ACTIVE = 2;
+  AFFILIATE_STATUS_SUSPENDED = 3;
+  AFFILIATE_STATUS_TERMINATED = 4;
+}
+
+message AffiliateProfile {
+  string affiliate_id = 1;
+  string user_id = 2;
+  string parent_affiliate_id = 3; // Nullable; maximum 1 ancestor level allowed
+  AffiliateTier current_tier = 4;
+  AffiliateStatus status = 5;
+  string sebi_registration_number = 6; // Mandatory for corporate/sub-broker entities
+  string pan_hash = 7;
+  bool is_pan_operative = 8;
+  string settlement_wallet_address = 9; // On-chain Besu address
+  int64 created_at_unix = 10;
+}
+
+message RegisterAffiliateRequest {
+  string user_id = 1;
+  string parent_referral_code = 2; // Optional sponsor code
+  string sebi_registration_number = 3;
+  string settlement_wallet_address = 4;
+}
+
+message GenerateTrackingLinkRequest {
+  string affiliate_id = 1;
+  string campaign_tag = 2;
+  string custom_slug = 3;
+}
+
+message TrackingLinkResponse {
+  string referral_code = 1;
+  string tracking_url = 2;
+  string qr_code_payload = 3;
+}
+
+message TrackAttributionRequest {
+  string referee_user_id = 1;
+  string referral_code = 2;
+  string ip_address = 3;
+  string device_fingerprint = 4;
+}
+
+message TrackAttributionResponse {
+  bool attribution_successful = 1;
+  string direct_affiliate_id = 2;
+  string master_affiliate_id = 3; // Nullable if direct partner has no parent
+  string message = 4;
+}
+
+message HierarchyNode {
+  string affiliate_id = 1;
+  string user_id = 2;
+  uint32 depth = 3; // 1 = Direct Child, 2 = Grandchild (strictly <= 2)
+  AffiliateTier tier = 4;
+  string total_turnover_inr = 5;
+  string total_rebate_earned_inr = 6;
+  int64 onboarded_at_unix = 7;
+}
+
+message GetAffiliateHierarchyRequest {
+  string affiliate_id = 1;
+}
+
+message AffiliateHierarchyResponse {
+  string affiliate_id = 1;
+  AffiliateTier tier = 2;
+  repeated HierarchyNode direct_affiliates = 3;
+  uint32 total_referred_clients = 4;
+  string trailing_30d_turnover_inr = 5;
+}
+
+message CommissionStatementResponse {
+  string affiliate_id = 1;
+  string period_start = 2;
+  string period_end = 3;
+  string gross_turnover_inr = 4;
+  string eligible_brokerage_inr = 5;
+  string tier_1_commission_inr = 6;
+  string tier_2_override_commission_inr = 7;
+  string gross_commission_inr = 8;
+  string tds_rate_applied = 9; // e.g., "5.00%" or "20.00%"
+  string tds_withheld_inr = 10;
+  string net_payable_inr = 11;
+  string settlement_status = 12;
+}
+
+message GetCommissionStatementRequest {
+  string affiliate_id = 1;
+  string epoch_id = 2;
+}
+
+message TriggerSettlementEpochRequest {
+  string epoch_id = 1;
+  string admin_user_id = 2;
+  string maker_checker_token = 3;
+}
+
+message SettlementEpochSummary {
+  string epoch_id = 1;
+  uint32 total_affiliates_settled = 2;
+  string total_gross_commission_inr = 3;
+  string total_tds_deducted_inr = 4;
+  string total_net_disbursed_inr = 5;
+  string besu_merkle_root = 6;
+  string on_chain_tx_hash = 7;
+}
+
+message UpdateAffiliateContractRequest {
+  string affiliate_id = 1;
+  AffiliateTier custom_tier = 2;
+  string custom_direct_rate_bps = 3;
+  string custom_override_rate_bps = 4;
+  string approver_admin_id = 5;
+}
+
+message AffiliateContract {
+  string contract_id = 1;
+  string affiliate_id = 2;
+  uint32 direct_rebate_bps = 3;
+  uint32 override_rebate_bps = 4;
+  int64 effective_from_unix = 5;
+}

@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package growww.rms.v1;
+
+option go_package = "growww/rms/v1;rmsv1";
+
+service MarginEngineService {
+  rpc CheckPreOrderMargin (CheckPreOrderMarginRequest) returns (CheckPreOrderMarginResponse);
+  rpc EvaluatePortfolioMargin (EvaluatePortfolioMarginRequest) returns (EvaluatePortfolioMarginResponse);
+  rpc GetPortfolioRiskMetrics (GetPortfolioRiskMetricsRequest) returns (GetPortfolioRiskMetricsResponse);
+  rpc UpdateAssetVolatility (UpdateAssetVolatilityRequest) returns (UpdateAssetVolatilityResponse);
+}
+
+enum MarginCheckStatus {
+  MARGIN_CHECK_STATUS_UNSPECIFIED = 0;
+  MARGIN_CHECK_STATUS_APPROVED = 1;
+  MARGIN_CHECK_STATUS_INSUFFICIENT_MARGIN = 2;
+  MARGIN_CHECK_STATUS_PORTFOLIO_LOCKED = 3;
+  MARGIN_CHECK_STATUS_EXPOSURE_CAP_EXCEEDED = 4;
+}
+
+enum MarginAlertLevel {
+  MARGIN_ALERT_NORMAL = 0;
+  MARGIN_ALERT_WARNING_70 = 1;
+  MARGIN_ALERT_CRITICAL_85 = 2;
+  MARGIN_ALERT_BREACH_100 = 3;
+}
+
+message CheckPreOrderMarginRequest {
+  string request_id = 1;
+  string user_id = 2;
+  string ledger_address = 3;
+  string isin = 4;
+  string side = 5; // BUY, SELL
+  string order_type = 6; // LIMIT, MARKET
+  string price = 7; // Decimal string INR
+  string quantity = 8; // Fractional decimal string
+}
+
+message CheckPreOrderMarginResponse {
+  string request_id = 1;
+  string user_id = 2;
+  MarginCheckStatus status = 3;
+  string required_incremental_margin = 4;
+  string available_margin = 5;
+  string total_margin_after_order = 6;
+  string projected_utilization_percent = 7;
+  string rejection_reason = 8;
+  int64 evaluated_at_unix_ns = 9;
+}
+
+message EvaluatePortfolioMarginRequest {
+  string user_id = 2;
+  bool include_historical_simulation = 3;
+}
+
+message EvaluatePortfolioMarginResponse {
+  string user_id = 1;
+  string total_portfolio_value = 2;
+  string effective_collateral_value = 3;
+  string parametric_var_99 = 4;
+  string historical_var_99 = 5;
+  string extreme_loss_margin = 6;
+  string mark_to_market_loss = 7;
+  string total_margin_required = 8;
+  string margin_utilization_percent = 9;
+  MarginAlertLevel alert_level = 10;
+  int64 evaluated_at_unix_ns = 11;
+}
+
+message GetPortfolioRiskMetricsRequest {
+  string user_id = 1;
+}
+
+message GetPortfolioRiskMetricsResponse {
+  string user_id = 1;
+  string gross_exposure = 2;
+  string net_exposure = 3;
+  string portfolio_beta = 4;
+  string daily_portfolio_variance = 5;
+  repeated PositionRiskItem positions = 6;
+}
+
+message PositionRiskItem {
+  string isin = 1;
+  string symbol = 2;
+  string quantity = 3;
+  string current_price = 4;
+  string market_value = 5;
+  string daily_volatility_sigma = 6;
+  string elm_rate_percent = 7;
+  string standalone_var = 8;
+}
+
+message UpdateAssetVolatilityRequest {
+  string isin = 1;
+  string ewma_volatility_sigma = 2;
+  string elm_rate_percent = 3;
+  string updated_by = 4;
+}
+
+message UpdateAssetVolatilityResponse {
+  bool success = 1;
+  int64 applied_at_unix_ns = 2;
+}

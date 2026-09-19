@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package growww.surveillance.v1;
+
+option go_package = "growww/surveillance/v1;surveillancev1";
+
+service SurveillanceService {
+  rpc GetSymbolMarketState (GetSymbolMarketStateRequest) returns (GetSymbolMarketStateResponse);
+  rpc TriggerManualHalt (TriggerManualHaltRequest) returns (TriggerManualHaltResponse);
+  rpc ResumeSymbolTrading (ResumeSymbolTradingRequest) returns (ResumeSymbolTradingResponse);
+  rpc ListSurveillanceAlerts (ListSurveillanceAlertsRequest) returns (ListSurveillanceAlertsResponse);
+}
+
+enum MarketTradingStatus {
+  STATUS_CONTINUOUS_TRADING = 0;
+  STATUS_VOLATILITY_PAUSE = 1;
+  STATUS_CALL_AUCTION = 2;
+  STATUS_HALTED = 3;
+  STATUS_EMERGENCY_STOP = 4;
+}
+
+enum AlertCategory {
+  ALERT_CATEGORY_UNSPECIFIED = 0;
+  ALERT_CATEGORY_SPOOFING = 1;
+  ALERT_CATEGORY_LAYERING = 2;
+  ALERT_CATEGORY_WASH_TRADING = 3;
+  ALERT_CATEGORY_EXCESSIVE_OTR = 4;
+  ALERT_CATEGORY_CIRCUIT_BREAKER_TRIP = 5;
+  ALERT_CATEGORY_PRICE_BAND_VIOLATION = 6;
+  ALERT_CATEGORY_MARKING_THE_CLOSE = 7;
+}
+
+message GetSymbolMarketStateRequest {
+  string isin = 1;
+}
+
+message GetSymbolMarketStateResponse {
+  string isin = 1;
+  MarketTradingStatus status = 2;
+  string static_upper_band = 3;
+  string static_lower_band = 4;
+  string dynamic_upper_band = 5;
+  string dynamic_lower_band = 6;
+  string reference_price = 7;
+  string current_5min_vwap = 8;
+  int64 halt_start_time_unix = 9;
+  int64 halt_duration_seconds = 10;
+}
+
+message TriggerManualHaltRequest {
+  string isin = 1;
+  string reason = 2;
+  string admin_user_id = 3;
+  int64 duration_seconds = 4;
+}
+
+message TriggerManualHaltResponse {
+  string isin = 1;
+  MarketTradingStatus new_status = 2;
+  bool halt_enacted = 3;
+}
+
+message ResumeSymbolTradingRequest {
+  string isin = 1;
+  string admin_user_id = 2;
+  bool start_with_call_auction = 3;
+}
+
+message ResumeSymbolTradingResponse {
+  string isin = 1;
+  MarketTradingStatus new_status = 2;
+  bool resumed = 3;
+}
+
+message ListSurveillanceAlertsRequest {
+  string isin = 1;
+  AlertCategory category = 2;
+  int64 start_time_unix = 3;
+  int64 end_time_unix = 4;
+  int32 page_size = 5;
+}
+
+message SurveillanceAlert {
+  string alert_id = 1;
+  string isin = 2;
+  AlertCategory category = 3;
+  string severity = 4; // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  string participant_id = 5;
+  string description = 6;
+  double confidence_score = 7;
+  int64 triggered_at_unix = 8;
+}
+
+message ListSurveillanceAlertsResponse {
+  repeated SurveillanceAlert alerts = 1;
+}

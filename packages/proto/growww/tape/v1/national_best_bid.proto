@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package growww.tape.v1;
+
+option go_package = "github.com/growww/proto/gen/go/tape/v1;tapev1";
+
+enum MarketVenue {
+  MARKET_VENUE_UNSPECIFIED = 0;
+  MARKET_VENUE_NSE = 1;
+  MARKET_VENUE_BSE = 2;
+  MARKET_VENUE_MCX = 3;
+  MARKET_VENUE_NBSE = 4;
+}
+
+enum TapeIdentifier {
+  TAPE_IDENTIFIER_UNSPECIFIED = 0;
+  TAPE_IDENTIFIER_A_NSE = 1;
+  TAPE_IDENTIFIER_B_BSE = 2;
+  TAPE_IDENTIFIER_C_MCX = 3;
+  TAPE_IDENTIFIER_N_NBSE = 4;
+}
+
+enum MarketCondition {
+  MARKET_CONDITION_NORMAL = 0;
+  MARKET_CONDITION_LOCKED = 1;
+  MARKET_CONDITION_CROSSED = 2;
+  MARKET_CONDITION_HALTED = 3;
+}
+
+message VenueQuote {
+  MarketVenue venue = 1;
+  uint64 bid_price_paise = 2;
+  uint64 bid_quantity = 3;
+  uint64 ask_price_paise = 4;
+  uint64 ask_quantity = 5;
+  int64 venue_timestamp_ns = 6;
+  int64 ingestion_timestamp_ns = 7;
+}
+
+message ConsolidatedQuote {
+  string isin = 1;
+  uint64 national_best_bid_paise = 2;
+  uint64 national_best_bid_quantity = 3;
+  MarketVenue national_best_bid_venue = 4;
+  uint64 national_best_offer_paise = 5;
+  uint64 national_best_offer_quantity = 6;
+  MarketVenue national_best_offer_venue = 7;
+  int64 spread_paise = 8;
+  uint32 spread_bps = 9;
+  MarketCondition condition = 10;
+  repeated VenueQuote participating_venues = 11;
+  int64 calculated_at_ns = 12;
+  uint64 sequence_number = 13;
+}
+
+message ConsolidatedTrade {
+  string isin = 1;
+  TapeIdentifier tape = 2;
+  MarketVenue venue = 3;
+  string venue_trade_id = 4;
+  uint64 trade_price_paise = 5;
+  uint64 trade_quantity = 6;
+  int64 trade_timestamp_ns = 7;
+  int64 tape_sequence_number = 8;
+  bool is_cross_trade = 9;
+}
+
+message VenueRoutingAllocation {
+  MarketVenue venue = 1;
+  uint32 allocation_percentage_bps = 2; // e.g. 6000 = 60.00%
+  uint64 available_depth = 3;
+  uint32 estimated_latency_micros = 4;
+  uint32 venue_fee_bps = 5;
+}
+
+message VenueRoutingHint {
+  string isin = 1;
+  MarketVenue primary_venue = 2;
+  MarketVenue secondary_venue = 3;
+  repeated VenueRoutingAllocation allocations = 4;
+  int64 generated_at_ns = 5;
+}
+
+message StreamNBBORequest {
+  repeated string isins = 1;
+}
+
+message StreamConsolidatedTapeRequest {
+  repeated string isins = 1;
+  repeated TapeIdentifier tapes = 2;
+}
+
+message GetNBBORequest {
+  string isin = 1;
+}
+
+message OraclePriceAttestation {
+  string isin = 1;
+  uint64 vwap_midpoint_price_paise = 2;
+  uint64 aggregate_volume_shares = 3;
+  int64 window_start_ns = 4;
+  int64 window_end_ns = 5;
+  bytes signature = 6;
+  string attestation_hash = 7;
+}
+
+service NBBOConsolidatedTapeService {
+  rpc GetNBBO (GetNBBORequest) returns (ConsolidatedQuote);
+  rpc StreamNBBO (StreamNBBORequest) returns (stream ConsolidatedQuote);
+  rpc StreamConsolidatedTape (StreamConsolidatedTapeRequest) returns (stream ConsolidatedTrade);
+  rpc GetRoutingHint (GetNBBORequest) returns (VenueRoutingHint);
+}

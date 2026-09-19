@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package growww.clearing.v1;
+
+option go_package = "github.com/growww/proto/gen/go/clearing/v1;clearingv1";
+
+enum DepositoryType {
+  DEPOSITORY_TYPE_UNSPECIFIED = 0;
+  DEPOSITORY_TYPE_NSDL = 1;
+  DEPOSITORY_TYPE_CDSL = 2;
+}
+
+enum ClearingCorporation {
+  CLEARING_CORPORATION_UNSPECIFIED = 0;
+  CLEARING_CORPORATION_NSCCL = 1; // NSE Clearing Limited
+  CLEARING_CORPORATION_ICCL = 2;  // Indian Clearing Corporation Limited
+}
+
+enum PledgeStatus {
+  PLEDGE_STATUS_UNSPECIFIED = 0;
+  PLEDGE_STATUS_INITIATED = 1;
+  PLEDGE_STATUS_AUTH_PENDING = 2;
+  PLEDGE_STATUS_PLEDGED_TO_TM = 3;
+  PLEDGE_STATUS_RE_PLEDGE_INITIATED = 4;
+  PLEDGE_STATUS_RE_PLEDGED_TO_CC = 5;
+  PLEDGE_STATUS_RELEASE_PENDING = 6;
+  PLEDGE_STATUS_RELEASED = 7;
+  PLEDGE_STATUS_INVOKED = 8;
+  PLEDGE_STATUS_REJECTED = 9;
+}
+
+message CollateralItem {
+  string isin = 1;
+  uint64 quantity = 2;
+  uint64 ltp_paise = 3;
+  uint32 haircut_bps = 4; // Basis points (e.g., 2000 = 20.00%)
+  uint64 effective_margin_credit_paise = 5;
+}
+
+message InitiateMarginPledgeRequest {
+  string account_id = 1;
+  string hashed_boid = 2;
+  DepositoryType depository = 3;
+  ClearingCorporation target_cc = 4;
+  repeated CollateralItem items = 5;
+  string client_ip = 6;
+  string user_agent = 7;
+}
+
+message InitiateMarginPledgeResponse {
+  string pledge_request_id = 1;
+  PledgeStatus status = 2;
+  string depository_auth_url = 3; // Redirect URL for CDSL TPIN / NSDL OTP
+  string session_token = 4;
+  int64 expires_at_ns = 5;
+}
+
+message VerifyPledgeOtpRequest {
+  string pledge_request_id = 1;
+  string session_token = 2;
+  string otp_or_pin = 3;
+}
+
+message VerifyPledgeOtpResponse {
+  string pledge_request_id = 1;
+  PledgeStatus status = 2;
+  string depository_transaction_id = 3;
+  uint64 total_collateral_value_paise = 4;
+  uint64 effective_margin_credit_paise = 5;
+  uint64 platform_fee_paise = 6; // 0.00% (No fee at all) platform fee
+  string error_message = 7;
+}
+
+message InitiateMarginRePledgeRequest {
+  string pledge_request_id = 1;
+  ClearingCorporation target_cc = 2;
+  repeated CollateralItem items = 3;
+}
+
+message InitiateMarginRePledgeResponse {
+  string repledge_id = 1;
+  PledgeStatus status = 2;
+  string cc_confirmation_ref = 3;
+  uint64 allocated_margin_credit_paise = 4;
+}
+
+message InitiateReleasePledgeRequest {
+  string account_id = 1;
+  string pledge_request_id = 2;
+  string isin = 3;
+  uint64 quantity = 4;
+}
+
+message InitiateReleasePledgeResponse {
+  string release_request_id = 1;
+  PledgeStatus status = 2;
+  bool margin_check_passed = 3;
+  string depository_release_ref = 4;
+}
+
+message GetCollateralValuationRequest {
+  string account_id = 1;
+}
+
+message GetCollateralValuationResponse {
+  string account_id = 1;
+  uint64 total_gross_value_paise = 2;
+  uint64 total_haircut_paise = 3;
+  uint64 net_margin_credit_paise = 4;
+  uint64 cash_equivalent_paise = 5;
+  uint64 non_cash_paise = 6;
+  bool meets_50_50_cash_rule = 7;
+  repeated CollateralItem holdings = 8;
+  int64 evaluated_at_ns = 9;
+}
+
+service ClearingPledgeService {
+  rpc InitiateMarginPledge (InitiateMarginPledgeRequest) returns (InitiateMarginPledgeResponse);
+  rpc VerifyPledgeOtp (VerifyPledgeOtpRequest) returns (VerifyPledgeOtpResponse);
+  rpc InitiateMarginRePledge (InitiateMarginRePledgeRequest) returns (InitiateMarginRePledgeResponse);
+  rpc InitiateReleasePledge (InitiateReleasePledgeRequest) returns (InitiateReleasePledgeResponse);
+  rpc GetCollateralValuation (GetCollateralValuationRequest) returns (GetCollateralValuationResponse);
+}

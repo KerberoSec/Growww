@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package growww.marketfeeder.v1;
+
+option go_package = "growww/marketfeeder/v1;marketfeederv1";
+
+enum ExchangeVenue {
+  EXCHANGE_VENUE_UNSPECIFIED = 0;
+  EXCHANGE_VENUE_BINANCE = 1;
+  EXCHANGE_VENUE_COINBASE = 2;
+  EXCHANGE_VENUE_KRAKEN = 3;
+  EXCHANGE_VENUE_OKX = 4;
+}
+
+message ExchangeTickMessage {
+  string trade_id = 1;
+  ExchangeVenue venue = 2;
+  string symbol = 3;             // e.g., "BTCUSDT"
+  string price = 4;              // Fixed-point decimal string
+  string quantity = 5;           // Fixed-point decimal string
+  int64 exchange_timestamp_ns = 6;
+  int64 ingested_timestamp_ns = 7;
+  bool is_buyer_maker = 8;
+}
+
+message FairIndexPriceMessage {
+  string symbol = 1;             // "BTCUSDT"
+  string index_price = 2;        // Computed fair trimmed median
+  string chainlink_price = 3;    // On-chain anchor price
+  int64 timestamp_ns = 4;
+  uint32 active_venues_count = 5;
+  repeated ExchangeVenue participating_venues = 6;
+  bool anchor_divergence_warning = 7;
+}
+
+message TickerMessage {
+  string symbol = 1;             // "BTCUSDT"
+  string ltp = 2;                // Last Traded Price (index or last validated tick)
+  string fair_index_price = 3;   // Real-time trimmed median
+  string high_24h = 4;
+  string low_24h = 5;
+  string volume_24h = 6;
+  string turnover_24h = 7;       // 24h quote volume in USDT
+  string price_change_24h = 8;
+  string price_change_percent_24h = 9;
+  int64 timestamp_ms = 10;
+  uint64 sequence_number = 11;
+}
+
+message CandleMessage {
+  string symbol = 1;             // "BTCUSDT"
+  string interval = 2;           // "1s", "1m", "5m", "15m", "1h", "1d"
+  int64 start_time_ms = 3;
+  int64 close_time_ms = 4;
+  string open = 5;
+  string high = 6;
+  string low = 7;
+  string close = 8;
+  string volume = 9;             // Total BTC volume
+  string turnover = 10;          // Total USDT turnover
+  string vwap = 11;              // Volume-Weighted Average Price
+  uint64 trade_count = 12;
+  bool is_closed = 13;           // True if candle interval has sealed
+}
+
+service MarketFeederService {
+  rpc GetCurrentIndex (GetCurrentIndexRequest) returns (FairIndexPriceMessage);
+  rpc StreamTicks (StreamTicksRequest) returns (stream ExchangeTickMessage);
+  rpc StreamIndex (StreamIndexRequest) returns (stream FairIndexPriceMessage);
+}
+
+message GetCurrentIndexRequest {
+  string symbol = 1;
+}
+
+message StreamTicksRequest {
+  string symbol = 1;
+  repeated ExchangeVenue venues = 2;
+}
+
+message StreamIndexRequest {
+  string symbol = 1;
+}

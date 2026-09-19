@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package growww.abuse.v1;
+
+option go_package = "github.com/growww/services/abuse-prevention/gen/v1;abusev1";
+
+service AbusePreventionService {
+  rpc EvaluateRequest (EvaluateRequestPayload) returns (EvaluateResponse);
+  rpc ReportAuthFailure (AuthFailureReport) returns (ReportResponse);
+  rpc ManageBlocklist (BlocklistRequest) returns (BlocklistResponse);
+  rpc GetAbuseMetrics (AbuseMetricsRequest) returns (AbuseMetricsResponse);
+}
+
+message EvaluateRequestPayload {
+  string client_ip = 1;
+  string user_id = 2; // Optional for unauthenticated requests
+  string device_fingerprint = 3;
+  string route_path = 4;
+  string http_method = 5;
+  string client_tier = 6; // GUEST / KYC_1 / TRADER / INSTITUTIONAL
+  int32 cost_weight = 7; // Request complexity weight (e.g. 1 for get, 5 for order)
+}
+
+message EvaluateResponse {
+  bool is_allowed = 1;
+  string action = 2; // ALLOW / THROTTLE / CHALLENGE_CAPTCHA / BLOCK
+  int64 remaining_quota = 3;
+  int64 reset_duration_ms = 4;
+  string rejection_reason = 5;
+}
+
+message AuthFailureReport {
+  string client_ip = 1;
+  string attempted_identifier = 2;
+  string device_fingerprint = 3;
+  int64 timestamp = 4;
+}
+
+message ReportResponse {
+  bool action_taken = 1;
+  string current_threat_level = 2;
+}
+
+message BlocklistRequest {
+  string entity_type = 1; // IP / SUBNET / USER_ID / DEVICE_ID
+  string entity_value = 2;
+  string reason = 3;
+  int64 duration_seconds = 4; // 0 for permanent
+  string admin_id = 5;
+}
+
+message BlocklistResponse {
+  bool success = 1;
+  int64 expires_at = 2;
+}
+
+message AbuseMetricsRequest {}
+message AbuseMetricsResponse {
+  int64 total_requests_evaluated = 1;
+  int64 total_throttled = 2;
+  int64 total_blocked = 3;
+  int64 active_blocked_ips_count = 4;
+}

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package growww.circuit.v1;
+
+option go_package = "growww/packages/proto/growww/circuit/v1;circuitv1";
+
+message CircuitbreakerresiliencematrixRequest {
+  string request_id = 1;
+  string entity_id = 2;
+  uint64 amount_e8 = 3;
+  uint64 timestamp_ms = 4;
+  map<string, string> metadata = 5;
+}
+
+message CircuitbreakerresiliencematrixResponse {
+  string request_id = 1;
+  bool success = 2;
+  string transaction_hash = 3;
+  uint64 block_number = 4;
+  string error_message = 5;
+}
+
+service CircuitbreakerresiliencematrixService {
+  rpc Execute(CircuitbreakerresiliencematrixRequest) returns (CircuitbreakerresiliencematrixResponse);
+}

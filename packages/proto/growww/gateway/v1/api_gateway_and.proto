@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package growww.gateway.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/growww/services/api-gateway/gen/v1;gatewayv1";
+
+service ClientBFFService {
+  rpc GetDashboardOverview (DashboardRequest) returns (DashboardResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/dashboard/overview"
+    };
+  }
+
+  rpc GetProofOfReserveSummary (PoRSummaryRequest) returns (PoRSummaryResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/public/proof-of-reserve"
+    };
+  }
+}
+
+message DashboardRequest {
+  string user_id = 1;
+}
+
+message DashboardResponse {
+  string user_id = 1;
+  string inr_wallet_balance = 2;
+  string total_portfolio_value_inr = 3;
+  string total_unrealized_pnl_inr = 4;
+  string total_realized_pnl_inr = 5;
+  repeated HoldingItem top_holdings = 6;
+  repeated ActiveOrderItem pending_orders = 7;
+  int64 server_time = 8;
+}
+
+message HoldingItem {
+  string isin = 1;
+  string symbol = 2;
+  string company_name = 3;
+  string fractional_units = 4;
+  string average_cost_price = 5;
+  string current_market_price = 6;
+  string current_value = 7;
+}
+
+message ActiveOrderItem {
+  string order_id = 1;
+  string symbol = 2;
+  string order_type = 3;
+  string side = 4;
+  string quantity = 5;
+  string price = 6;
+  string status = 7;
+}
+
+message PoRSummaryRequest {}
+
+message PoRSummaryResponse {
+  string latest_merkle_root = 1;
+  uint64 block_number = 2;
+  string on_chain_tx_hash = 3;
+  string verified_custody_timestamp = 4;
+  int64 total_backed_securities_count = 5;
+}

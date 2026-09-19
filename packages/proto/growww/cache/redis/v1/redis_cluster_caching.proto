@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package growww.cache.redis.v1;
+
+option go_package = "growww/packages/proto/growww/cache/redis/v1;redisv1";
+
+message CachedQuoteRequest {
+  string request_id = 1;
+  string user_id = 2;
+  string symbol = 3;
+  uint64 amount_e8 = 4;
+  uint64 price_e8 = 5;
+  uint64 timestamp_ms = 6;
+  map<string, string> metadata = 7;
+}
+
+message CachedQuoteResponse {
+  string request_id = 1;
+  bool success = 2;
+  string execution_id = 3;
+  string transaction_hash = 4;
+  uint64 block_number = 5;
+  string error_message = 6;
+  int64 processed_at_ms = 7;
+}
+
+message CachedQuoteEvent {
+  string event_id = 1;
+  string aggregate_id = 2;
+  string event_type = 3;
+  bytes payload = 4;
+  uint64 sequence_number = 5;
+  uint64 timestamp_ms = 6;
+}
+
+service RedisCacheService {
+  rpc GetCachedQuote(CachedQuoteRequest) returns (CachedQuoteResponse);
+}

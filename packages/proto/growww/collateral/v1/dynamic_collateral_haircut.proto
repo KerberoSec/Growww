@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package growww.collateral.v1;
+
+option go_package = "growww/collateral/v1;collateralv1";
+
+service CollateralHaircutService {
+  rpc EvaluateCollateralHaircut (HaircutEvaluationRequest) returns (HaircutEvaluationResponse);
+  rpc GetEffectiveCollateral (GetEffectiveCollateralRequest) returns (GetEffectiveCollateralResponse);
+  rpc SetAutoTopupPreference (SetAutoTopupPreferenceRequest) returns (SetAutoTopupPreferenceResponse);
+  rpc GetMarginCallStatus (GetMarginCallStatusRequest) returns (GetMarginCallStatusResponse);
+  rpc StreamHaircutUpdates (StreamHaircutUpdatesRequest) returns (stream HaircutUpdateEvent);
+}
+
+enum CollateralAssetClass {
+  COLLATERAL_ASSET_CLASS_UNSPECIFIED = 0;
+  COLLATERAL_ASSET_CLASS_CASH = 1;
+  COLLATERAL_ASSET_CLASS_CBDC = 2;
+  COLLATERAL_ASSET_CLASS_GSEC = 3;
+  COLLATERAL_ASSET_CLASS_TBILL = 4;
+  COLLATERAL_ASSET_CLASS_SGB = 5;
+  COLLATERAL_ASSET_CLASS_EQUITY_GROUP_1 = 6;
+}
+
+enum MarginCallSeverity {
+  MARGIN_CALL_SEVERITY_UNSPECIFIED = 0;
+  MARGIN_CALL_SEVERITY_WARNING = 1;      // 75% <= Utilization < 90%
+  MARGIN_CALL_SEVERITY_CRITICAL = 2;     // 90% <= Utilization < 100% (Formal Call)
+  MARGIN_CALL_SEVERITY_BREACH = 3;       // 100% <= Utilization < 105% (Reduce-Only)
+  MARGIN_CALL_SEVERITY_LIQUIDATION = 4;  // Utilization >= 105% or Timer Expired
+}
+
+enum MarginCallStatus {
+  MARGIN_CALL_STATUS_UNSPECIFIED = 0;
+  MARGIN_CALL_STATUS_ACTIVE = 1;
+  MARGIN_CALL_STATUS_CURED_VIA_DEPOSIT = 2;
+  MARGIN_CALL_STATUS_CURED_VIA_AUTOTOPUP = 3;
+  MARGIN_CALL_STATUS_CURED_VIA_MARKET = 4;
+  MARGIN_CALL_STATUS_EXPIRED_LIQUIDATED = 5;
+}
+
+message HaircutEvaluationRequest {
+  string isin = 1;
+  CollateralAssetClass asset_class = 2;
+  string market_price = 3;             // e.g. "2450.50"
+  string var_rate = 4;                 // e.g. "0.1250" (12.5% from VaR Engine)
+  string elm_rate = 5;                 // e.g. "0.0350" (3.5% Extreme Loss Margin)
+  string rolling_30d_volatility = 6;   // Annualized volatility
+  string bid_ask_impact_cost = 7;      // 15m order book impact cost percentage
+  string concentration_ratio = 8;      // Ratio of asset to total collateral pool
+}
+
+message HaircutEvaluationResponse {
+  string isin = 1;
+  string dynamic_haircut_rate = 2;     // e.g. "0.2250" (22.5%)
+  string base_haircut = 3;
+  string volatility_addon = 4;
+  string liquidity_addon = 5;
+  string concentration_penalty = 6;
+  int64 computed_at_unix_ms = 7;
+}
+
+message PledgedAssetItem {
+  string isin = 1;
+  CollateralAssetClass asset_class = 2;
+  string quantity = 3;
+  string last_traded_price = 4;
+  string dynamic_haircut_rate = 5;
+  string gross_valuation = 6;
+  string effective_valuation = 7;      // Gross * (1 - Haircut)
+}
+
+message GetEffectiveCollateralRequest {
+  string user_id = 1;
+}
+
+message GetEffectiveCollateralResponse {
+  string user_id = 1;
+  string total_gross_collateral_inr = 2;
+  string total_effective_collateral_inr = 3;
+  string total_margin_requirement_inr = 4;
+  string margin_utilization_percentage = 5; // (Req / Effective) * 100
+  MarginCallSeverity current_severity = 6;
+  repeated PledgedAssetItem pledged_assets = 7;
+  int64 updated_at_unix_ms = 8;
+}
+
+message MarginCallEvent {
+  string margin_call_id = 1;
+  string user_id = 2;
+  MarginCallSeverity severity = 3;
+  string total_effective_collateral_inr = 4;
+  string total_margin_requirement_inr = 5;
+  string margin_shortfall_inr = 6;
+  string margin_utilization_percentage = 7;
+  int64 cure_deadline_unix_ms = 8;
+  string notice_reference_number = 9;
+  int64 triggered_at_unix_ms = 10;
+}
+
+message HaircutUpdateEvent {
+  string isin = 1;
+  CollateralAssetClass asset_class = 2;
+  string old_haircut_rate = 3;
+  string new_haircut_rate = 4;
+  string trigger_reason = 5;
+  int64 timestamp_unix_ms = 6;
+}
+
+message SetAutoTopupPreferenceRequest {
+  string user_id = 1;
+  bool auto_topup_enabled = 2;
+  string max_topup_per_call_inr = 3;
+  string daily_cumulative_cap_inr = 4;
+  string preferred_source_wallet = 5; // "CASH" or "CBDC"
+}
+
+message SetAutoTopupPreferenceResponse {
+  string user_id = 1;
+  bool auto_topup_enabled = 2;
+  string status = 3;
+  int64 updated_at_unix_ms = 4;
+}
+
+message GetMarginCallStatusRequest {
+  string user_id = 1;
+}
+
+message GetMarginCallStatusResponse {
+  string user_id = 1;
+  bool has_active_margin_call = 2;
+  string margin_call_id = 3;
+  MarginCallSeverity severity = 4;
+  MarginCallStatus status = 5;
+  string shortfall_inr = 6;
+  int64 cure_deadline_unix_ms = 7;
+  int64 remaining_cure_seconds = 8;
+  bool auto_topup_attempted = 9;
+  string auto_topup_result = 10;
+}
+
+message StreamHaircutUpdatesRequest {
+  repeated string isins = 1;
+}

@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package growww.grievance.v1;
+
+option go_package = "growww/grievance/v1;grievancev1";
+option py_generic_services = true;
+
+// Internal gRPC service for inter-microservice grievance queries and automated triage
+service GrievanceGatewayService {
+  rpc GetComplaintDetails (GetComplaintRequest) returns (GetComplaintResponse);
+  rpc TriggerAutomatedTriage (TriggerTriageRequest) returns (TriggerTriageResponse);
+  rpc IngestEvidenceArtifact (IngestEvidenceRequest) returns (IngestEvidenceResponse);
+  rpc QueryUserGrievanceHistory (UserHistoryRequest) returns (UserHistoryResponse);
+  rpc GetSlaStatus (GetSlaStatusRequest) returns (GetSlaStatusResponse);
+}
+
+enum RegulatorType {
+  REGULATOR_TYPE_UNSPECIFIED = 0;
+  REGULATOR_TYPE_SEBI_SCORES = 1;
+  REGULATOR_TYPE_RBI_CMS = 2;
+  REGULATOR_TYPE_SMART_ODR = 3;
+}
+
+enum GrievanceState {
+  GRIEVANCE_STATE_UNSPECIFIED = 0;
+  GRIEVANCE_STATE_INGESTED = 1;
+  GRIEVANCE_STATE_MAPPED_TO_USER = 2;
+  GRIEVANCE_STATE_DIAGNOSTIC_TRIAGE = 3;
+  GRIEVANCE_STATE_INVESTIGATION_PENDING = 4;
+  GRIEVANCE_STATE_AUDIT_DOSSIER_COLLECTED = 5;
+  GRIEVANCE_STATE_ATR_DRAFTED_MAKER = 6;
+  GRIEVANCE_STATE_ATR_APPROVED_CHECKER = 7;
+  GRIEVANCE_STATE_ATR_SUBMITTED = 8;
+  GRIEVANCE_STATE_FIRST_REVIEW_ESCALATED = 9;
+  GRIEVANCE_STATE_ODR_CONCILIATION = 10;
+  GRIEVANCE_STATE_RESOLVED_CLOSED = 11;
+  GRIEVANCE_STATE_REJECTED_INVALID = 12;
+}
+
+message GetComplaintRequest {
+  string complaint_id = 1;
+}
+
+message GetComplaintResponse {
+  string complaint_id = 1;
+  string external_reg_number = 2;
+  RegulatorType regulator = 3;
+  GrievanceState state = 4;
+  string user_id = 5;
+  string complainant_pan_hash = 6;
+  string category = 7;
+  string description = 8;
+  int64 intake_timestamp = 9;
+  int64 statutory_deadline = 10;
+  int32 days_remaining = 11;
+  string besu_tx_hash = 12;
+}
+
+message TriggerTriageRequest {
+  string complaint_id = 1;
+}
+
+message TriggerTriageResponse {
+  string complaint_id = 1;
+  bool automated_resolution_possible = 2;
+  string diagnostic_summary = 3;
+  string evidence_dossier_id = 4;
+}
+
+message IngestEvidenceRequest {
+  string complaint_id = 1;
+  string source_service = 2; // user-service, wallet-service, audit-log-service
+  string artifact_type = 3;   // BANK_UTR, CONTRACT_NOTE, AUDIT_LOG_EXCERPT
+  string document_uri = 4;
+  string document_sha256 = 5;
+}
+
+message IngestEvidenceResponse {
+  string evidence_id = 1;
+  bool successfully_attached = 2;
+}
+
+message UserHistoryRequest {
+  string user_id = 1;
+  string pan_hash = 2;
+}
+
+message UserHistoryResponse {
+  repeated GetComplaintResponse complaints = 1;
+  int32 total_historical_complaints = 2;
+  int32 active_complaints = 3;
+}
+
+message GetSlaStatusRequest {
+  string complaint_id = 1;
+}
+
+message GetSlaStatusResponse {
+  string complaint_id = 1;
+  int64 intake_timestamp = 2;
+  int64 deadline_timestamp = 3;
+  int32 total_sla_days = 4; // 21 for SCORES, 30 for RBI
+  int32 days_elapsed = 5;
+  int32 days_remaining = 6;
+  int32 escalation_stage = 7; // 0=Normal, 1=Day 7, 2=Day 14, 3=Day 18 (P1), 4=Day 20
+  bool is_breached = 8;
+}

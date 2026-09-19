@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package growww.portfolio.v1;
+
+option go_package = "growww/portfolio/v1;portfoliov1";
+
+service PortfolioService {
+  rpc GetPortfolioSummary (GetPortfolioSummaryRequest) returns (GetPortfolioSummaryResponse);
+  rpc GetHoldingDetail (GetHoldingDetailRequest) returns (GetHoldingDetailResponse);
+  rpc ListHoldings (ListHoldingsRequest) returns (ListHoldingsResponse);
+  rpc ReserveHolding (ReserveHoldingRequest) returns (ReserveHoldingResponse);
+  rpc ReleaseHolding (ReleaseHoldingRequest) returns (ReleaseHoldingResponse);
+}
+
+message GetPortfolioSummaryRequest {
+  string user_id = 1;
+}
+
+message GetPortfolioSummaryResponse {
+  string user_id = 1;
+  string total_portfolio_value_inr = 2; // Decimal string
+  string total_invested_value_inr = 3;
+  string total_unrealized_pnl_inr = 4;
+  string total_unrealized_pnl_percent = 5;
+  string todays_pnl_inr = 6;
+  string todays_pnl_percent = 7;
+  int32 total_holdings_count = 8;
+  int64 updated_at_unix = 9;
+}
+
+message HoldingItemDto {
+  string isin = 1;
+  string symbol = 2;
+  string company_name = 3;
+  string total_quantity = 4; // Fractional quantity (e.g. "1.250000")
+  string available_quantity = 5;
+  string average_cost_price_inr = 6;
+  string current_market_price_inr = 7;
+  string current_value_inr = 8;
+  string unrealized_pnl_inr = 9;
+  string unrealized_pnl_percent = 10;
+  string token_contract_address = 11;
+}
+
+message GetHoldingDetailRequest {
+  string user_id = 1;
+  string isin = 2;
+}
+
+message GetHoldingDetailResponse {
+  HoldingItemDto holding = 1;
+  repeated TaxLotDto tax_lots = 2;
+}
+
+message TaxLotDto {
+  string lot_id = 1;
+  string original_quantity = 2;
+  string remaining_quantity = 3;
+  string purchase_price_inr = 4;
+  int64 acquired_at_unix = 5;
+}
+
+message ListHoldingsRequest {
+  string user_id = 1;
+}
+
+message ListHoldingsResponse {
+  repeated HoldingItemDto holdings = 1;
+}
+
+message ReserveHoldingRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string order_id = 3;
+  string isin = 4;
+  string quantity = 5;
+}
+
+message ReserveHoldingResponse {
+  string hold_id = 1;
+  bool success = 2;
+  string remaining_available_quantity = 3;
+}
+
+message ReleaseHoldingRequest {
+  string hold_id = 1;
+  string reason = 2;
+}
+
+message ReleaseHoldingResponse {
+  bool success = 1;
+}

@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package growww.domain.v1;
+
+import "google/protobuf/timestamp.proto";
+import "proto/common/v1/fractional_share.proto";
+import "proto/common/v1/money.proto";
+
+option go_package = "github.com/growww/proto/gen/go/domain/v1;domainv1";
+
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  ORDER_TYPE_MARKET = 1;
+  ORDER_TYPE_LIMIT = 2;
+  ORDER_TYPE_STOP_LIMIT = 3;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING_RISK = 1;
+  ORDER_STATUS_OPEN = 2;
+  ORDER_STATUS_PARTIALLY_FILLED = 3;
+  ORDER_STATUS_FILLED = 4;
+  ORDER_STATUS_CANCELLED = 5;
+  ORDER_STATUS_REJECTED = 6;
+  ORDER_STATUS_EXPIRED = 7;
+}
+
+message Order {
+  string order_id = 1;                       // UUIDv7
+  string user_id = 2;                        // UUIDv7
+  string isin = 3;                           // e.g. "INE002A01018"
+  OrderSide side = 4;
+  OrderType type = 5;
+  OrderStatus status = 6;
+  growww.common.v1.FractionalShare quantity = 7;
+  growww.common.v1.FractionalShare filled_quantity = 8;
+  growww.common.v1.Money limit_price = 9;    // Required for LIMIT orders
+  growww.common.v1.Money stop_price = 10;    // Required for STOP_LIMIT
+  string idempotency_key = 11;
+  string rejection_reason = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}

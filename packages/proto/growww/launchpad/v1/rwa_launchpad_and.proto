@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+package growww.launchpad.v1;
+
+option go_package = "github.com/growww/proto/gen/go/launchpad/v1;launchpadv1";
+
+import "google/protobuf/timestamp.proto";
+
+enum AuctionType {
+  AUCTION_TYPE_UNSPECIFIED = 0;
+  AUCTION_TYPE_DUTCH_DESCENDING = 1;
+  AUCTION_TYPE_FIXED_PRICE_OVERSUBSCRIPTION = 2;
+}
+
+enum AuctionStatus {
+  AUCTION_STATUS_UNSPECIFIED = 0;
+  AUCTION_STATUS_SCHEDULED = 1;
+  AUCTION_STATUS_BIDDING_OPEN = 2;
+  AUCTION_STATUS_BIDDING_CLOSED = 3;
+  AUCTION_STATUS_PRICE_DISCOVERY = 4;
+  AUCTION_STATUS_SETTLING = 5;
+  AUCTION_STATUS_FINALIZED = 6;
+  AUCTION_STATUS_CANCELLED = 7;
+}
+
+enum AssetCategory {
+  ASSET_CATEGORY_UNSPECIFIED = 0;
+  ASSET_CATEGORY_REAL_ESTATE = 1;
+  ASSET_CATEGORY_PRIVATE_CREDIT = 2;
+  ASSET_CATEGORY_CORPORATE_DEBT = 3;
+  ASSET_CATEGORY_INFRASTRUCTURE = 4;
+}
+
+message CreateAuctionRequest {
+  string isin = 1;
+  string asset_symbol = 2;
+  AssetCategory asset_category = 3;
+  AuctionType auction_type = 4;
+  uint64 total_token_supply = 5;
+  uint64 start_price_paise = 6;
+  uint64 floor_price_paise = 7;
+  uint64 min_bid_quantity = 8;
+  uint64 max_bid_quantity_per_investor = 9;
+  google.protobuf.Timestamp bidding_start_time = 10;
+  google.protobuf.Timestamp bidding_end_time = 11;
+  google.protobuf.Timestamp reveal_end_time = 12;
+  bool vesting_enabled = 13;
+  uint32 cliff_duration_days = 14;
+  uint32 total_vesting_duration_days = 15;
+  string issuer_account_id = 16;
+  string token_contract_address = 17;
+}
+
+message CreateAuctionResponse {
+  string auction_id = 1;
+  AuctionStatus status = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message GetAuctionStatusRequest {
+  string auction_id = 1;
+}
+
+message GetAuctionStatusResponse {
+  string auction_id = 1;
+  string isin = 2;
+  AuctionStatus status = 3;
+  uint64 current_price_paise = 4;
+  uint64 total_token_supply = 5;
+  uint64 total_bids_submitted = 6;
+  uint64 total_quantity_revealed = 7;
+  uint64 uniform_clearing_price_paise = 8;
+  google.protobuf.Timestamp bidding_start_time = 9;
+  google.protobuf.Timestamp bidding_end_time = 10;
+  google.protobuf.Timestamp reveal_end_time = 11;
+  bool is_over_subscribed = 12;
+}
+
+message SubmitBidCommitmentRequest {
+  string auction_id = 1;
+  string investor_account_id = 2;
+  string commitment_hash = 3; // SHA-256(price_paise || quantity || salt || investor_account_id)
+  uint64 max_liability_paise = 4; // Escrow lock amount (quantity * start_price_paise)
+  string client_ip = 5;
+}
+
+message SubmitBidCommitmentResponse {
+  string commitment_id = 1;
+  string escrow_lock_id = 2;
+  google.protobuf.Timestamp committed_at = 3;
+  bool accepted = 4;
+}
+
+message RevealBidRequest {
+  string auction_id = 1;
+  string investor_account_id = 2;
+  string commitment_id = 3;
+  uint64 bid_price_paise = 4;
+  uint64 bid_quantity = 5;
+  string salt = 6;
+}
+
+message RevealBidResponse {
+  string bid_id = 1;
+  bool is_valid = 2;
+  string rejection_reason = 3;
+  google.protobuf.Timestamp revealed_at = 4;
+}
+
+message StreamAuctionPriceTicksRequest {
+  string auction_id = 1;
+}
+
+message PriceTick {
+  string auction_id = 1;
+  uint64 current_price_paise = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  uint64 elapsed_seconds = 4;
+  uint64 remaining_seconds = 5;
+}
+
+message FinalizeAuctionSettlementRequest {
+  string auction_id = 1;
+}
+
+message FinalizeAuctionSettlementResponse {
+  string auction_id = 1;
+  uint64 uniform_clearing_price_paise = 2;
+  uint64 total_tokens_allocated = 3;
+  uint64 gross_capital_raised_paise = 4;
+  uint64 total_refunds_paise = 5;
+  uint64 platform_fee_paise = 6; // 0.00% (Zero Fee) platform fee
+  uint32 total_successful_investors = 7;
+  string on_chain_settlement_tx_hash = 8;
+  AuctionStatus status = 9;
+}
+
+message GetVestingScheduleRequest {
+  string auction_id = 1;
+  string investor_account_id = 2;
+}
+
+message GetVestingScheduleResponse {
+  string auction_id = 1;
+  string investor_account_id = 2;
+  uint64 total_vesting_tokens = 3;
+  uint64 claimed_tokens = 4;
+  uint64 claimable_tokens = 5;
+  google.protobuf.Timestamp cliff_end_time = 6;
+  google.protobuf.Timestamp vesting_end_time = 7;
+  string vesting_vault_contract_address = 8;
+}
+
+service LaunchpadService {
+  rpc CreateAuction (CreateAuctionRequest) returns (CreateAuctionResponse);
+  rpc GetAuctionStatus (GetAuctionStatusRequest) returns (GetAuctionStatusResponse);
+  rpc SubmitBidCommitment (SubmitBidCommitmentRequest) returns (SubmitBidCommitmentResponse);
+  rpc RevealBid (RevealBidRequest) returns (RevealBidResponse);
+  rpc StreamAuctionPriceTicks (StreamAuctionPriceTicksRequest) returns (stream PriceTick);
+  rpc FinalizeAuctionSettlement (FinalizeAuctionSettlementRequest) returns (FinalizeAuctionSettlementResponse);
+  rpc GetVestingSchedule (GetVestingScheduleRequest) returns (GetVestingScheduleResponse);
+}

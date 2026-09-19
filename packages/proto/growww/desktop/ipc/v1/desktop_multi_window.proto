@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package growww.desktop.ipc.v1;
+
+option go_package = "growww/packages/proto/growww/desktop/ipc/v1;ipcv1";
+
+enum IPCMessageType {
+  IPC_MESSAGE_TYPE_UNSPECIFIED = 0;
+  IPC_MESSAGE_TYPE_SYMBOL_CHANGE = 1;
+  IPC_MESSAGE_TYPE_DEPTH_UPDATE = 2;
+  IPC_MESSAGE_TYPE_ORDER_ACTION = 3;
+  IPC_MESSAGE_TYPE_THEME_CHANGE = 4;
+  IPC_MESSAGE_TYPE_PANIC_CANCEL_ALL = 5;
+  IPC_MESSAGE_TYPE_HEARTBEAT = 6;
+}
+
+message IPCEnvelope {
+  string message_id = 1;
+  string source_window_id = 2;
+  string target_window_id = 3; // empty string denotes broadcast to all windows
+  IPCMessageType message_type = 4;
+  string link_group = 5;       // e.g. "group_red", "group_blue"
+  int64 timestamp_ns = 6;
+  bytes payload = 7;
+}
+
+message IPCSymbolChangePayload {
+  string symbol = 1;
+  string base_asset = 2;
+  string quote_asset = 3;
+}
+
+message IPCOrderActionPayload {
+  string client_order_id = 1;
+  string symbol = 2;
+  string side = 3; // "BUY" or "SELL"
+  string order_type = 4; // "LIMIT" or "MARKET"
+  int64 price_micros = 5;
+  int64 quantity_micros = 6;
+}
+
+message IPCBroadcastRequest {
+  IPCEnvelope envelope = 1;
+}
+
+message IPCBroadcastResponse {
+  bool acknowledged = 1;
+  int32 recipient_count = 2;
+}
+
+service DesktopIPCService {
+  rpc Broadcast(IPCBroadcastRequest) returns (IPCBroadcastResponse);
+}

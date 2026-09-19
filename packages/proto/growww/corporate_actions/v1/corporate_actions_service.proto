@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package growww.corporate_actions.v1;
+
+option go_package = "github.com/growww/services/corporate-actions/gen/v1;corporateactionsv1";
+
+service CorporateActionsService {
+  rpc DeclareCorporateAction (DeclareActionRequest) returns (DeclareActionResponse);
+  rpc CalculateEntitlements (CalculateEntitlementsRequest) returns (CalculateEntitlementsResponse);
+  rpc ExecuteDividendPayout (ExecuteDividendRequest) returns (ExecuteDividendResponse);
+  rpc ExecuteTokenSplit (ExecuteSplitRequest) returns (ExecuteSplitResponse);
+  rpc GetCorporateActionStatus (ActionStatusRequest) returns (ActionStatusResponse);
+}
+
+message DeclareActionRequest {
+  string isin = 1;
+  string action_type = 2; // CASH_DIVIDEND / STOCK_SPLIT / BONUS_ISSUE / RIGHTS_ISSUE
+  string ex_date = 3;     // YYYY-MM-DD
+  string record_date = 4; // YYYY-MM-DD
+  string dividend_per_share_inr = 5; // For cash dividends
+  string split_ratio_numerator = 6;  // e.g. "10" for 10:1 split
+  string split_ratio_denominator = 7; // e.g. "1"
+  string announcement_ref = 8;
+}
+
+message DeclareActionResponse {
+  string action_id = 1;
+  string status = 2; // ANNOUNCED / PENDING_RECORD_DATE
+  int64 declared_at = 3;
+}
+
+message CalculateEntitlementsRequest {
+  string action_id = 1;
+}
+
+message CalculateEntitlementsResponse {
+  string action_id = 1;
+  int64 total_eligible_investors = 2;
+  string total_gross_payout_inr = 3;
+  string total_tds_deducted_inr = 4; // Always 0 (Zero-TDS)
+  string status = 5; // ENTITLEMENTS_CALCULATED
+}
+
+message ExecuteDividendRequest {
+  string action_id = 1;
+  string maker_admin_id = 2;
+  string checker_admin_id = 3;
+}
+
+message ExecuteDividendResponse {
+  string action_id = 1;
+  int64 total_credited_investors = 2;
+  string total_disbursed_inr = 3;
+  string status = 4; // COMPLETED
+  int64 completed_at = 5;
+}
+
+message ExecuteSplitRequest {
+  string action_id = 1;
+  string maker_admin_id = 2;
+  string checker_admin_id = 3;
+}
+
+message ExecuteSplitResponse {
+  string action_id = 1;
+  string on_chain_tx_hash = 2;
+  string new_total_token_supply = 3;
+  string status = 4; // EXECUTED_ON_CHAIN
+}
+
+message ActionStatusRequest {
+  string action_id = 1;
+}
+
+message ActionStatusResponse {
+  string action_id = 1;
+  string isin = 2;
+  string action_type = 3;
+  string status = 4;
+  int64 record_date_timestamp = 5;
+  string on_chain_tx_hash = 6;
+}

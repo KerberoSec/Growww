@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package growww.section.v1;
+
+option go_package = "growww/packages/proto/growww/section/v1;sectionv1";
+
+message Decoupled Voluntary Tax Accounting (Zero On-Chain TDS)taxlotmathRequest {
+  string request_id = 1;
+  string entity_id = 2;
+  uint64 amount_e8 = 3;
+  uint64 timestamp_ms = 4;
+  map<string, string> metadata = 5;
+}
+
+message Decoupled Voluntary Tax Accounting (Zero On-Chain TDS)taxlotmathResponse {
+  string request_id = 1;
+  bool success = 2;
+  string transaction_hash = 3;
+  uint64 block_number = 4;
+  string error_message = 5;
+}
+
+service Decoupled Voluntary Tax Accounting (Zero On-Chain TDS)taxlotmathService {
+  rpc Execute(Decoupled Voluntary Tax Accounting (Zero On-Chain TDS)taxlotmathRequest) returns (Decoupled Voluntary Tax Accounting (Zero On-Chain TDS)taxlotmathResponse);
+}

@@ -1,0 +1,213 @@
+syntax = "proto3";
+
+package growww.demowallet.v1;
+
+option go_package = "growww/demowallet/v1;demowalletv1";
+
+// DemoWalletService manages virtual sandbox balances and paper-trading accounting.
+service DemoWalletService {
+  // Disburse baseline virtual funds (10,000 vUSDT and 1 vBTC) subject to 24-hour rate limit.
+  rpc ClaimFaucet (ClaimFaucetRequest) returns (ClaimFaucetResponse);
+
+  // Check user faucet eligibility, cooldown expiration, and remaining quota.
+  rpc GetFaucetEligibility (GetFaucetEligibilityRequest) returns (GetFaucetEligibilityResponse);
+
+  // Query virtual balances for a single asset.
+  rpc GetVirtualBalance (GetVirtualBalanceRequest) returns (GetVirtualBalanceResponse);
+
+  // List all virtual balances and open margin holds for a user.
+  rpc ListVirtualBalances (ListVirtualBalancesRequest) returns (ListVirtualBalancesResponse);
+
+  // Reset entire virtual portfolio back to canonical baseline (10,000 vUSDT, 1 vBTC).
+  rpc ResetVirtualPortfolio (ResetVirtualPortfolioRequest) returns (ResetVirtualPortfolioResponse);
+
+  // Place a temporary balance hold when a demo order is submitted to the matching engine.
+  rpc HoldVirtualBalance (HoldVirtualBalanceRequest) returns (HoldVirtualBalanceResponse);
+
+  // Release a temporary balance hold upon demo order cancellation or rejection.
+  rpc ReleaseVirtualBalance (ReleaseVirtualBalanceRequest) returns (ReleaseVirtualBalanceResponse);
+
+  // Atomically settle a matched demo trade between buyer and seller virtual accounts.
+  rpc SettleVirtualTrade (SettleVirtualTradeRequest) returns (SettleVirtualTradeResponse);
+
+  // Query historical double-entry virtual ledger journal entries for auditing.
+  rpc ListVirtualLedgerEntries (ListVirtualLedgerEntriesRequest) returns (ListVirtualLedgerEntriesResponse);
+}
+
+enum VirtualAsset {
+  VIRTUAL_ASSET_UNSPECIFIED = 0;
+  VIRTUAL_ASSET_VUSDT = 1;
+  VIRTUAL_ASSET_VBTC = 2;
+  VIRTUAL_ASSET_VETH = 3;
+  VIRTUAL_ASSET_VINR = 4;
+}
+
+enum HoldStatus {
+  HOLD_STATUS_UNSPECIFIED = 0;
+  HOLD_STATUS_ACTIVE = 1;
+  HOLD_STATUS_SETTLED = 2;
+  HOLD_STATUS_RELEASED = 3;
+}
+
+enum LedgerEntryType {
+  LEDGER_ENTRY_TYPE_UNSPECIFIED = 0;
+  LEDGER_ENTRY_TYPE_DEBIT = 1;
+  LEDGER_ENTRY_TYPE_CREDIT = 2;
+}
+
+message ClaimFaucetRequest {
+  string user_id = 1;
+  string idempotency_key = 2;
+  string client_ip = 3;
+  string testnet_wallet_address = 4; // Optional: user on-chain Besu testnet address
+}
+
+message ClaimFaucetResponse {
+  string claim_id = 1;
+  string user_id = 2;
+  repeated AssetGrant grants = 3;
+  int64 claimed_at_unix_ms = 4;
+  int64 next_eligible_at_unix_ms = 5;
+  string on_chain_tx_hash = 6;       // Populated if minted on Besu Testnet
+}
+
+message AssetGrant {
+  VirtualAsset asset = 1;
+  string amount = 2;                // e.g., "10000.000000" or "1.00000000"
+  string new_available_balance = 3;
+}
+
+message GetFaucetEligibilityRequest {
+  string user_id = 1;
+  string client_ip = 2;
+}
+
+message GetFaucetEligibilityResponse {
+  string user_id = 1;
+  bool is_eligible = 2;
+  int64 cooldown_remaining_seconds = 3;
+  int64 next_eligible_at_unix_ms = 4;
+  string rejection_reason = 5;
+}
+
+message GetVirtualBalanceRequest {
+  string user_id = 1;
+  VirtualAsset asset = 2;
+}
+
+message GetVirtualBalanceResponse {
+  string user_id = 1;
+  VirtualAsset asset = 2;
+  string available_balance = 3;
+  string locked_balance = 4;
+  string total_balance = 5;         // available + locked
+  int64 updated_at_unix_ms = 6;
+}
+
+message ListVirtualBalancesRequest {
+  string user_id = 1;
+}
+
+message ListVirtualBalancesResponse {
+  string user_id = 1;
+  repeated GetVirtualBalanceResponse balances = 2;
+  string total_portfolio_equity_vusdt = 3;
+}
+
+message ResetVirtualPortfolioRequest {
+  string user_id = 1;
+  string idempotency_key = 2;
+  string reason = 3;
+}
+
+message ResetVirtualPortfolioResponse {
+  string user_id = 1;
+  bool success = 2;
+  repeated AssetGrant reset_balances = 3;
+  int64 reset_at_unix_ms = 4;
+}
+
+message HoldVirtualBalanceRequest {
+  string user_id = 1;
+  string order_id = 2;
+  string idempotency_key = 3;
+  VirtualAsset asset = 4;
+  string amount = 5;
+}
+
+message HoldVirtualBalanceResponse {
+  string hold_id = 1;
+  string order_id = 2;
+  string user_id = 3;
+  VirtualAsset asset = 4;
+  string held_amount = 5;
+  string remaining_available_balance = 6;
+  HoldStatus status = 7;
+  int64 created_at_unix_ms = 8;
+}
+
+message ReleaseVirtualBalanceRequest {
+  string hold_id = 1;
+  string user_id = 2;
+  string order_id = 3;
+  string idempotency_key = 4;
+  string amount_to_release = 5; // Supports full or partial release
+}
+
+message ReleaseVirtualBalanceResponse {
+  string hold_id = 1;
+  string user_id = 2;
+  string order_id = 3;
+  string released_amount = 4;
+  string new_available_balance = 5;
+  HoldStatus status = 6;
+  int64 released_at_unix_ms = 7;
+}
+
+message SettleVirtualTradeRequest {
+  string trade_id = 1;
+  string idempotency_key = 2;
+  string buyer_user_id = 3;
+  string buyer_order_id = 4;
+  string seller_user_id = 5;
+  string seller_order_id = 6;
+  VirtualAsset base_asset = 7;        // e.g., VIRTUAL_ASSET_VBTC
+  string base_amount = 8;             // e.g., "0.50000000"
+  VirtualAsset quote_asset = 9;       // e.g., VIRTUAL_ASSET_VUSDT
+  string quote_amount = 10;           // e.g., "32500.000000"
+  string buyer_fee_amount = 11;       // in quote_asset
+  string seller_fee_amount = 12;      // in quote_asset
+}
+
+message SettleVirtualTradeResponse {
+  string trade_id = 1;
+  bool settled = 2;
+  string buyer_new_base_balance = 3;
+  string buyer_new_quote_balance = 4;
+  string seller_new_base_balance = 5;
+  string seller_new_quote_balance = 6;
+  int64 settled_at_unix_ms = 7;
+}
+
+message ListVirtualLedgerEntriesRequest {
+  string user_id = 1;
+  VirtualAsset asset = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message VirtualLedgerEntry {
+  string entry_id = 1;
+  string transaction_id = 2;
+  VirtualAsset asset = 3;
+  LedgerEntryType entry_type = 4;
+  string amount = 5;
+  string balance_after = 6;
+  string narrative = 7;
+  int64 created_at_unix_ms = 8;
+}
+
+message ListVirtualLedgerEntriesResponse {
+  repeated VirtualLedgerEntry entries = 1;
+  string next_page_token = 2;
+}

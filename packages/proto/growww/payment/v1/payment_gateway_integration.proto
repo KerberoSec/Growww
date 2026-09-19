@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package growww.payment.v1;
+
+option go_package = "growww/payment/v1;paymentv1";
+
+service PaymentGatewayService {
+  rpc InitiateDeposit (InitiateDepositRequest) returns (InitiateDepositResponse);
+  rpc InitiatePayout (InitiatePayoutRequest) returns (InitiatePayoutResponse);
+  rpc VerifyBankAccount (VerifyBankAccountRequest) returns (VerifyBankAccountResponse);
+  rpc GetTransactionStatus (GetTransactionStatusRequest) returns (GetTransactionStatusResponse);
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  PAYMENT_METHOD_UPI_INTENT = 1;
+  PAYMENT_METHOD_UPI_QR = 2;
+  PAYMENT_METHOD_UPI_COLLECT = 3;
+  PAYMENT_METHOD_NETBANKING = 4;
+  PAYMENT_METHOD_IMPS = 5;
+  PAYMENT_METHOD_NEFT_RTGS = 6;
+}
+
+enum TransactionStatus {
+  TX_STATUS_UNSPECIFIED = 0;
+  TX_STATUS_INITIATED = 1;
+  TX_STATUS_PENDING = 2;
+  TX_STATUS_SUCCESS = 3;
+  TX_STATUS_FAILED = 4;
+  TX_STATUS_EXPIRED = 5;
+}
+
+message InitiateDepositRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string bank_account_id = 3;
+  string amount_inr = 4; // Decimal string (e.g. "5000.00")
+  PaymentMethod payment_method = 5;
+  string upi_vpa = 6; // Required for UPI_COLLECT
+}
+
+message InitiateDepositResponse {
+  string transaction_id = 1;
+  string payment_gateway_reference = 2;
+  string upi_intent_url = 3; // For mobile deep-link
+  string qr_code_base64 = 4; // For web QR display
+  int64 expires_at_unix = 5;
+}
+
+message InitiatePayoutRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string bank_account_id = 3;
+  string amount_inr = 4;
+}
+
+message InitiatePayoutResponse {
+  string payout_id = 1;
+  TransactionStatus status = 2;
+  string message = 3;
+  int64 estimated_settlement_unix = 4;
+}
+
+message VerifyBankAccountRequest {
+  string user_id = 1;
+  string account_number = 2;
+  string ifsc_code = 3;
+  string account_holder_name_input = 4;
+}
+
+message VerifyBankAccountResponse {
+  string bank_account_id = 1;
+  bool is_verified = 2;
+  string verified_name_from_bank = 3;
+  string name_match_score = 4; // e.g. "0.94"
+  string bank_name = 5;
+  string rejection_reason = 6;
+}
+
+message GetTransactionStatusRequest {
+  string transaction_id = 1;
+}
+
+message GetTransactionStatusResponse {
+  string transaction_id = 1;
+  string user_id = 2;
+  string amount_inr = 3;
+  TransactionStatus status = 4;
+  string bank_utr = 5;
+  int64 completed_at_unix = 6;
+}

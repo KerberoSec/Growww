@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package growww.afterhours.v1;
+
+option go_package = "github.com/growww/proto/gen/go/afterhours/v1;afterhoursv1";
+
+enum MarketSessionState {
+  MARKET_SESSION_STATE_UNSPECIFIED = 0;
+  MARKET_SESSION_STATE_PRIMARY_OPEN = 1;        // 09:15 - 15:30 IST
+  MARKET_SESSION_STATE_AFTER_HOURS = 2;         // 15:30 - 09:00 IST
+  MARKET_SESSION_STATE_PRE_OPEN_BUFFERING = 3;  // 09:00 - 09:15 IST
+  MARKET_SESSION_STATE_HALTED = 4;
+}
+
+enum ExecutionVenuePreference {
+  EXECUTION_VENUE_PREFERENCE_UNSPECIFIED = 0;
+  EXECUTION_VENUE_PREFERENCE_AFTER_HOURS_SYNTHETIC = 1; // Match 24/7 on NBSE CLOB + vAMM
+  EXECUTION_VENUE_PREFERENCE_PRIMARY_QUEUE = 2;         // Buffer for next 09:00 IST pre-open
+  EXECUTION_VENUE_PREFERENCE_HYBRID_BEST_EFFORT = 3;    // Try after-hours, queue remainder for primary
+}
+
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+message SubmitAfterHoursOrderRequest {
+  string order_id = 1;
+  string account_id = 2;
+  string isin = 3;
+  OrderSide side = 4;
+  uint64 quantity_e6 = 5;               // Fractional quantity (6 decimal places)
+  uint64 limit_price_paise = 6;         // Price in paise (INR 0.01 = 1 paise)
+  ExecutionVenuePreference venue_pref = 7;
+  int64 client_timestamp_ns = 8;
+  string signature = 9;
+}
+
+message SubmitAfterHoursOrderResponse {
+  string order_id = 1;
+  string status = 2;                    // "ACCEPTED_MATCHED", "ACCEPTED_QUEUED", "REJECTED_COLLAR_BREACH"
+  uint64 executed_quantity_e6 = 3;
+  uint64 executed_price_paise = 4;
+  uint64 total_fee_paise = 5;           // 0.00% (No fee at all) platform fee
+  uint64 treasury_fee_paise = 6;        // Governed by FeeController (0.00% at launch)
+  uint64 sgf_fee_paise = 7;             // Governed by FeeController (0.00% at launch)
+  uint64 ipf_fee_paise = 8;             // Governed by FeeController (0.00% at launch)
+  string tx_hash = 9;                   // Besu DvP settlement transaction hash
+  int64 processed_at_ns = 10;
+}
+
+message GetVammPoolStateRequest {
+  string isin = 1;
+}
+
+message GetVammPoolStateResponse {
+  string isin = 1;
+  uint64 virtual_token_reserve_e6 = 2;
+  uint64 virtual_quote_reserve_paise = 3;
+  uint64 spot_price_paise = 4;
+  uint32 dynamic_collar_bps = 5;        // Collar width in basis points
+  uint64 min_collar_price_paise = 6;
+  uint64 max_collar_price_paise = 7;
+  int64 updated_at_ns = 8;
+}
+
+service AfterHoursGatewayService {
+  rpc SubmitAfterHoursOrder (SubmitAfterHoursOrderRequest) returns (SubmitAfterHoursOrderResponse);
+  rpc GetVammPoolState (GetVammPoolStateRequest) returns (GetVammPoolStateResponse);
+}

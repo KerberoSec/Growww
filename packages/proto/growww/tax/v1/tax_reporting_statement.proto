@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package growww.tax.v1;
+
+option go_package = "github.com/growww/services/tax-service/gen/v1;taxv1";
+
+service TaxReportingService {
+  rpc GetCapitalGainsSummary (CapitalGainsSummaryRequest) returns (CapitalGainsSummaryResponse);
+  rpc GenerateTaxStatement (GenerateTaxStatementRequest) returns (GenerateTaxStatementResponse);
+  rpc GetTaxStatementStatus (TaxStatementStatusRequest) returns (TaxStatementStatusResponse);
+  rpc ListTaxLots (ListTaxLotsRequest) returns (ListTaxLotsResponse);
+}
+
+message CapitalGainsSummaryRequest {
+  string user_id = 1;
+  string financial_year = 2; // e.g., "2025-2026"
+  string quarter = 3;        // Optional: Q1, Q2, Q3, Q4, or ALL
+}
+
+message CapitalGainsSummaryResponse {
+  string user_id = 1;
+  string financial_year = 2;
+  string total_stcg_inr = 3;
+  string total_ltcg_inr = 4;
+  string total_dividend_income_inr = 5;
+  string total_tds_deducted_inr = 6;
+  string total_stt_paid_inr = 7;
+  string net_realized_pnl_inr = 8;
+  repeated SecurityTaxBreakdown security_breakdowns = 9;
+}
+
+message SecurityTaxBreakdown {
+  string isin = 1;
+  string symbol = 2;
+  string stcg_inr = 3;
+  string ltcg_inr = 4;
+  string total_buy_value_inr = 5;
+  string total_sell_value_inr = 6;
+}
+
+message GenerateTaxStatementRequest {
+  string user_id = 1;
+  string financial_year = 2;
+  string report_format = 3; // PDF / EXCEL / JSON
+}
+
+message GenerateTaxStatementResponse {
+  string statement_id = 1;
+  string status = 2; // GENERATING / READY
+  int64 requested_at = 3;
+}
+
+message TaxStatementStatusRequest {
+  string statement_id = 1;
+}
+
+message TaxStatementStatusResponse {
+  string statement_id = 1;
+  string status = 2; // READY / PROCESSING / FAILED
+  string download_url = 3;
+  string file_sha256 = 4;
+  int64 expires_at = 5;
+}
+
+message ListTaxLotsRequest {
+  string user_id = 1;
+  string isin = 2;
+}
+
+message ListTaxLotsResponse {
+  repeated TaxLotItem open_lots = 1;
+}
+
+message TaxLotItem {
+  string lot_id = 1;
+  string isin = 2;
+  string acquisition_date = 3;
+  string original_units = 4;
+  string remaining_units = 5;
+  string cost_price_per_unit = 6;
+  string on_chain_buy_tx_hash = 7;
+}

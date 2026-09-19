@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package growww.order.v1;
+
+option go_package = "growww/order/v1;orderv1";
+
+service OrderService {
+  rpc PlaceOrder (PlaceOrderRequest) returns (PlaceOrderResponse);
+  rpc CancelOrder (CancelOrderRequest) returns (CancelOrderResponse);
+  rpc GetOrder (GetOrderRequest) returns (GetOrderResponse);
+  rpc ListOrders (ListOrdersRequest) returns (ListOrdersResponse);
+}
+
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  ORDER_TYPE_LIMIT = 1;
+  ORDER_TYPE_MARKET = 2;
+  ORDER_TYPE_IOC = 3; // Immediate-or-Cancel
+  ORDER_TYPE_FOK = 4; // Fill-or-Kill
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_SUBMITTED = 1;
+  ORDER_STATUS_ACCEPTED = 2;
+  ORDER_STATUS_PARTIALLY_FILLED = 3;
+  ORDER_STATUS_FILLED = 4;
+  ORDER_STATUS_CANCELLED = 5;
+  ORDER_STATUS_REJECTED = 6;
+  ORDER_STATUS_EXPIRED = 7;
+}
+
+message PlaceOrderRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string isin = 3; // e.g., "INE002A01018"
+  OrderSide side = 4;
+  OrderType type = 5;
+  string price = 6; // Limit price in INR (e.g., "2450.50"), optional for MARKET
+  string quantity = 7; // Fractional quantity (e.g., "0.500000")
+}
+
+message PlaceOrderResponse {
+  string order_id = 1;
+  OrderStatus status = 2;
+  string isin = 3;
+  string price = 4;
+  string quantity = 5;
+  int64 submitted_at_unix = 6;
+}
+
+message CancelOrderRequest {
+  string order_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message CancelOrderResponse {
+  string order_id = 1;
+  bool cancellation_requested = 2;
+  OrderStatus current_status = 3;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+  string user_id = 2;
+}
+
+message GetOrderResponse {
+  string order_id = 1;
+  string user_id = 2;
+  string isin = 3;
+  OrderSide side = 4;
+  OrderType type = 5;
+  OrderStatus status = 6;
+  string price = 7;
+  string quantity = 8;
+  string filled_quantity = 9;
+  string average_fill_price = 10;
+  int64 created_at_unix = 11;
+  int64 updated_at_unix = 12;
+}
+
+message ListOrdersRequest {
+  string user_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  repeated OrderStatus status_filter = 4;
+}
+
+message ListOrdersResponse {
+  repeated GetOrderResponse orders = 1;
+  string next_page_token = 2;
+}

@@ -1,0 +1,155 @@
+syntax = "proto3";
+
+package growww.vault.v1;
+
+option go_package = "growww/vault/v1;vaultv1";
+
+service MpcVaultService {
+  rpc InitiateDkg (InitiateDkgRequest) returns (InitiateDkgResponse);
+  rpc InitiateThresholdSigning (InitiateThresholdSigningRequest) returns (InitiateThresholdSigningResponse);
+  rpc RefreshKeyShares (RefreshKeySharesRequest) returns (RefreshKeySharesResponse);
+  rpc EvaluateWithdrawalPolicy (EvaluateWithdrawalPolicyRequest) returns (EvaluateWithdrawalPolicyResponse);
+  rpc GetVaultAccount (GetVaultAccountRequest) returns (GetVaultAccountResponse);
+  rpc GetSigningSessionStatus (GetSigningSessionStatusRequest) returns (GetSigningSessionStatusResponse);
+}
+
+enum CurveType {
+  CURVE_TYPE_UNSPECIFIED = 0;
+  CURVE_TYPE_SECP256K1 = 1; // GG20 / CGGMP21 ECDSA (EVM / Besu / BTC)
+  CURVE_TYPE_ED25519 = 2;   // FROST EdDSA (Solana / Aptos / Cosmos)
+}
+
+enum VaultPurpose {
+  VAULT_PURPOSE_UNSPECIFIED = 0;
+  VAULT_PURPOSE_SETTLEMENT_RELAYER = 1;
+  VAULT_PURPOSE_CUSTODY_HOT = 2;
+  VAULT_PURPOSE_CUSTODY_WARM = 3;
+  VAULT_PURPOSE_CUSTODY_COLD = 4;
+  VAULT_PURPOSE_SGF_COLLATERAL = 5;
+}
+
+enum SigningStatus {
+  SIGNING_STATUS_UNSPECIFIED = 0;
+  SIGNING_STATUS_PENDING_POLICY = 1;
+  SIGNING_STATUS_POLICY_APPROVED = 2;
+  SIGNING_STATUS_ROUND_1_IN_PROGRESS = 3;
+  SIGNING_STATUS_ROUND_2_IN_PROGRESS = 4;
+  SIGNING_STATUS_ROUND_3_IN_PROGRESS = 5;
+  SIGNING_STATUS_SIGNATURE_READY = 6;
+  SIGNING_STATUS_POLICY_REJECTED = 7;
+  SIGNING_STATUS_ABORTED_FAULT = 8;
+  SIGNING_STATUS_TIMED_OUT = 9;
+}
+
+message ParticipantNode {
+  uint32 node_id = 1;
+  string party_identifier = 2; // "GROWWW_NODE_1", "CUSTODIAN_BANK_NODE", "DEPOSITORY_TRUSTEE_NODE", "AUDITOR_NODE", "REGULATORY_ESCROW_NODE"
+  string endpoint_url = 3;
+  string tls_cert_fingerprint = 4;
+}
+
+message InitiateDkgRequest {
+  string dkg_session_id = 1;
+  CurveType curve = 2;
+  VaultPurpose purpose = 3;
+  uint32 threshold = 4; // 3
+  uint32 total_parties = 5; // 5
+  repeated ParticipantNode participants = 6;
+  string initiated_by = 7;
+}
+
+message InitiateDkgResponse {
+  string dkg_session_id = 1;
+  string vault_id = 2;
+  string group_public_key_hex = 3;
+  string derived_address = 4;
+  CurveType curve = 5;
+  int64 completed_at_unix_ns = 6;
+}
+
+message InitiateThresholdSigningRequest {
+  string signing_session_id = 1;
+  string vault_id = 2;
+  string transaction_payload_hash_hex = 3; // 32-byte SHA256 / Keccak256 hash
+  string destination_address = 4;
+  string asset_identifier = 5; // Token contract address or currency code
+  string amount_raw = 6; // Decimal string with full unit precision
+  string memo = 7;
+  repeated string operator_approvals = 8; // Dual-control FIDO2/WebAuthn signatures
+  string idempotency_key = 9;
+}
+
+message InitiateThresholdSigningResponse {
+  string signing_session_id = 1;
+  SigningStatus status = 2;
+  string signature_hex = 3; // DER format or (r, s, v) / (R, S)
+  string raw_r = 4;
+  string raw_s = 5;
+  uint32 recovery_id = 6;
+  int64 signed_at_unix_ns = 7;
+}
+
+message RefreshKeySharesRequest {
+  string refresh_session_id = 1;
+  string vault_id = 2;
+  repeated uint32 participating_node_ids = 3;
+  string authorization_proof = 4;
+}
+
+message RefreshKeySharesResponse {
+  string refresh_session_id = 1;
+  string vault_id = 2;
+  uint32 new_share_version = 3;
+  bool success = 4;
+  int64 refreshed_at_unix_ns = 5;
+}
+
+message EvaluateWithdrawalPolicyRequest {
+  string vault_id = 1;
+  string destination_address = 2;
+  string asset_identifier = 3;
+  string amount_raw = 4;
+  repeated string operator_signatures = 5;
+}
+
+message EvaluateWithdrawalPolicyResponse {
+  string vault_id = 1;
+  bool is_allowed = 2;
+  string rejection_reason = 3;
+  bool requires_time_lock = 4;
+  int64 cooldown_until_unix_ns = 5;
+  uint32 required_approvals = 6;
+  uint32 current_approvals = 7;
+}
+
+message GetVaultAccountRequest {
+  string vault_id = 1;
+}
+
+message GetVaultAccountResponse {
+  string vault_id = 2;
+  CurveType curve = 3;
+  VaultPurpose purpose = 4;
+  string group_public_key_hex = 5;
+  string derived_address = 6;
+  uint32 threshold = 7;
+  uint32 total_parties = 8;
+  uint32 share_version = 9;
+  bool is_active = 10;
+  int64 created_at_unix_ns = 11;
+}
+
+message GetSigningSessionStatusRequest {
+  string signing_session_id = 1;
+}
+
+message GetSigningSessionStatusResponse {
+  string signing_session_id = 1;
+  string vault_id = 2;
+  SigningStatus status = 3;
+  repeated uint32 participating_nodes = 4;
+  repeated uint32 faulted_nodes = 5;
+  string error_message = 6;
+  string signature_hex = 7;
+  int64 updated_at_unix_ns = 8;
+}

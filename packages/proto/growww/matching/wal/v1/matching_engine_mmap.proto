@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package growww.matching.wal.v1;
+
+option go_package = "growww/matching/wal/v1;walv1";
+
+service WalAdminService {
+  rpc GetWalStatus (GetWalStatusRequest) returns (GetWalStatusResponse);
+  rpc GetReplicationLag (GetReplicationLagRequest) returns (GetReplicationLagResponse);
+  rpc VerifyStateChecksum (VerifyStateChecksumRequest) returns (VerifyStateChecksumResponse);
+  rpc TriggerManualFailover (TriggerManualFailoverRequest) returns (TriggerManualFailoverResponse);
+  rpc StreamWalFrames (StreamWalFramesRequest) returns (stream WalFrameData);
+}
+
+enum NodeRole {
+  NODE_ROLE_UNSPECIFIED = 0;
+  NODE_ROLE_PRIMARY_LEADER = 1;
+  NODE_ROLE_HOT_SHADOW_REPLICA = 2;
+  NODE_ROLE_QUARANTINED = 3;
+  NODE_ROLE_RECOVERING = 4;
+}
+
+enum WalFlushMode {
+  WAL_FLUSH_MODE_UNSPECIFIED = 0;
+  WAL_FLUSH_MODE_MS_SYNC = 1;
+  WAL_FLUSH_MODE_MS_ASYNC_BATCHED = 2;
+}
+
+enum ChecksumStatus {
+  CHECKSUM_STATUS_UNSPECIFIED = 0;
+  CHECKSUM_STATUS_MATCH = 1;
+  CHECKSUM_STATUS_MISMATCH_DIVERGENCE = 2;
+  CHECKSUM_STATUS_PENDING_PEER = 3;
+}
+
+message GetWalStatusRequest {
+  string isin = 1;
+}
+
+message GetWalStatusResponse {
+  string node_id = 1;
+  NodeRole role = 2;
+  uint64 current_epoch = 3;
+  uint64 active_segment_id = 4;
+  uint64 last_committed_sequence_id = 5;
+  uint64 last_flushed_sequence_id = 6;
+  uint64 total_bytes_written = 7;
+  WalFlushMode flush_mode = 8;
+  int64 uptime_seconds = 9;
+  int64 timestamp_unix_ns = 10;
+}
+
+message GetReplicationLagRequest {
+  string isin = 1;
+}
+
+message GetReplicationLagResponse {
+  string primary_node_id = 1;
+  string shadow_node_id = 2;
+  uint64 primary_sequence_id = 3;
+  uint64 shadow_sequence_id = 4;
+  uint64 sequence_lag_count = 5;
+  int64 time_lag_nanoseconds = 6;
+  bool is_in_sync = 7;
+}
+
+message VerifyStateChecksumRequest {
+  string isin = 1;
+  uint64 match_sequence_interval = 2; // e.g. 10000
+}
+
+message VerifyStateChecksumResponse {
+  string isin = 1;
+  uint64 match_count = 2;
+  uint64 sequence_id = 3;
+  string primary_sha256_checksum = 4;
+  string shadow_sha256_checksum = 5;
+  ChecksumStatus status = 6;
+  int64 verified_at_unix_ns = 7;
+}
+
+message TriggerManualFailoverRequest {
+  string isin = 1;
+  string target_shadow_node_id = 2;
+  string reason = 3;
+}
+
+message TriggerManualFailoverResponse {
+  bool success = 1;
+  uint64 new_epoch = 2;
+  string promoted_node_id = 3;
+  int64 cutover_duration_microseconds = 4;
+  string message = 5;
+}
+
+message StreamWalFramesRequest {
+  string isin = 1;
+  uint64 start_sequence_id = 2;
+  uint32 max_frames = 3;
+}
+
+message WalFrameData {
+  uint64 epoch = 1;
+  uint64 sequence_id = 2;
+  uint32 frame_type = 3;
+  int64 timestamp_unix_ns = 4;
+  bytes raw_payload = 5;
+  uint32 crc32c = 6;
+}

@@ -1,0 +1,168 @@
+syntax = "proto3";
+
+package growww.btc.v1;
+
+option go_package = "github.com/growww/services/btc-lightning-ingress/gen/v1;btcv1";
+
+service BtcLightningIngressService {
+  rpc GenerateDepositAddress (GenerateDepositAddressRequest) returns (GenerateDepositAddressResponse);
+  rpc CreateLightningInvoice (CreateLightningInvoiceRequest) returns (CreateLightningInvoiceResponse);
+  rpc QueryDepositStatus (QueryDepositStatusRequest) returns (QueryDepositStatusResponse);
+  rpc RequestOnChainWithdrawal (RequestOnChainWithdrawalRequest) returns (RequestOnChainWithdrawalResponse);
+  rpc RequestLightningWithdrawal (RequestLightningWithdrawalRequest) returns (RequestLightningWithdrawalResponse);
+  rpc ExecuteVaultSweep (ExecuteVaultSweepRequest) returns (ExecuteVaultSweepResponse);
+  rpc GetVaultBalances (GetVaultBalancesRequest) returns (GetVaultBalancesResponse);
+  rpc RebalanceLightningLiquidity (RebalanceLightningLiquidityRequest) returns (RebalanceLightningLiquidityResponse);
+}
+
+enum AddressType {
+  ADDRESS_TYPE_UNSPECIFIED = 0;
+  ADDRESS_TYPE_NATIVE_SEGWIT_P2WPKH = 1; // BIP 84 (bc1q...)
+  ADDRESS_TYPE_TAPROOT_P2TR = 2;          // BIP 86 (bc1p...)
+}
+
+enum DepositChannel {
+  DEPOSIT_CHANNEL_UNSPECIFIED = 0;
+  DEPOSIT_CHANNEL_ON_CHAIN_BTC = 1;
+  DEPOSIT_CHANNEL_LIGHTNING_NETWORK = 2;
+}
+
+enum DepositState {
+  DEPOSIT_STATE_UNSPECIFIED = 0;
+  DEPOSIT_STATE_DETECTED_MEMPOOL = 1;
+  DEPOSIT_STATE_CONFIRMING = 2;
+  DEPOSIT_STATE_CONFIRMED = 3;
+  DEPOSIT_STATE_COLLATERAL_MINTED = 4;
+  DEPOSIT_STATE_RBF_CONFLICT_DETECTED = 5;
+  DEPOSIT_STATE_REORG_INVALIDATED = 6;
+}
+
+enum VaultTier {
+  VAULT_TIER_UNSPECIFIED = 0;
+  VAULT_TIER_HOT = 1;
+  VAULT_TIER_WARM_HSM = 2;
+  VAULT_TIER_COLD_MULTISIG = 3;
+  VAULT_TIER_LIGHTNING_CHANNELS = 4;
+}
+
+message GenerateDepositAddressRequest {
+  string investor_id = 1;
+  AddressType address_type = 2;
+  string label = 3;
+}
+
+message GenerateDepositAddressResponse {
+  string address = 1;
+  AddressType address_type = 2;
+  string derivation_path = 3;
+  int64 generated_at_utc = 4;
+}
+
+message CreateLightningInvoiceRequest {
+  string investor_id = 1;
+  uint64 amount_satoshis = 2;
+  string memo = 3;
+  int64 expiry_seconds = 4;
+}
+
+message CreateLightningInvoiceResponse {
+  string payment_request = 1; // BOLT 11 payment request string
+  string payment_hash = 2;    // SHA-256 payment hash hex
+  string r_preimage = 3;      // Preimage (empty until settled)
+  uint64 amount_satoshis = 4;
+  int64 expires_at_utc = 5;
+}
+
+message QueryDepositStatusRequest {
+  string deposit_id = 1;
+  string txid_or_payment_hash = 2;
+}
+
+message QueryDepositStatusResponse {
+  string deposit_id = 1;
+  DepositChannel channel = 2;
+  string txid_or_payment_hash = 3;
+  uint32 vout = 4;
+  uint64 amount_satoshis = 5;
+  uint32 confirmations = 6;
+  DepositState state = 7;
+  bool is_rbf_enabled = 8;
+  string besu_mint_tx_hash = 9;
+  int64 detected_at_utc = 10;
+  int64 confirmed_at_utc = 11;
+}
+
+message RequestOnChainWithdrawalRequest {
+  string withdrawal_id = 1;
+  string investor_id = 2;
+  string destination_address = 3;
+  uint64 amount_satoshis = 4;
+  uint64 target_fee_rate_sat_per_vbyte = 5;
+}
+
+message RequestOnChainWithdrawalResponse {
+  string withdrawal_id = 1;
+  string txid = 2;
+  uint64 gross_satoshis = 3;
+  uint64 network_fee_satoshis = 4;
+  string psbt_session_id = 5;
+  int64 broadcasted_at_utc = 6;
+}
+
+message RequestLightningWithdrawalRequest {
+  string withdrawal_id = 1;
+  string investor_id = 2;
+  string bolt11_payment_request = 3;
+  uint64 max_fee_satoshis = 4;
+}
+
+message RequestLightningWithdrawalResponse {
+  string withdrawal_id = 1;
+  string payment_hash = 2;
+  string payment_preimage = 3;
+  uint64 fee_paid_satoshis = 4;
+  int64 settled_at_utc = 5;
+}
+
+message ExecuteVaultSweepRequest {
+  VaultTier source_tier = 1;
+  VaultTier destination_tier = 2;
+  uint64 amount_satoshis = 3;
+  string destination_address = 4;
+}
+
+message ExecuteVaultSweepResponse {
+  string sweep_batch_id = 1;
+  string txid = 2;
+  uint64 swept_satoshis = 3;
+  uint64 fee_satoshis = 4;
+  string psbt_session_id = 5;
+}
+
+message GetVaultBalancesRequest {}
+
+message GetVaultBalancesResponse {
+  uint64 hot_balance_satoshis = 1;
+  uint64 warm_balance_satoshis = 2;
+  uint64 cold_balance_satoshis = 3;
+  uint64 lightning_local_balance_satoshis = 4;
+  uint64 lightning_remote_balance_satoshis = 5;
+  uint64 total_custody_satoshis = 6;
+  uint64 synthetic_besu_minted_satoshis = 7;
+  bool is_solvent = 8;
+  int64 reconciled_at_utc = 9;
+}
+
+message RebalanceLightningLiquidityRequest {
+  string channel_id = 1;
+  string swap_direction = 2; // LOOP_IN or LOOP_OUT
+  uint64 amount_satoshis = 3;
+}
+
+message RebalanceLightningLiquidityResponse {
+  string swap_id = 1;
+  string htlc_txid = 2;
+  uint64 amount_satoshis = 3;
+  uint64 cost_satoshis = 4;
+  string status = 5;
+}

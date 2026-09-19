@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package growww.debt.v1;
+
+option go_package = "github.com/growww/proto/gen/go/debt/v1;debtv1";
+
+enum SovereignSecurityType {
+  SOVEREIGN_SECURITY_TYPE_UNSPECIFIED = 0;
+  SOVEREIGN_SECURITY_TYPE_CENTRAL_GSEC = 1;
+  SOVEREIGN_SECURITY_TYPE_TREASURY_BILL = 2;
+  SOVEREIGN_SECURITY_TYPE_STATE_DEVELOPMENT_LOAN = 3;
+  SOVEREIGN_SECURITY_TYPE_SOVEREIGN_GREEN_BOND = 4;
+  SOVEREIGN_SECURITY_TYPE_STRIPS_PRINCIPAL = 5;
+  SOVEREIGN_SECURITY_TYPE_STRIPS_COUPON = 6;
+}
+
+enum DayCountConvention {
+  DAY_COUNT_CONVENTION_UNSPECIFIED = 0;
+  DAY_COUNT_CONVENTION_ACTUAL_ACTUAL_ICMA = 1;
+  DAY_COUNT_CONVENTION_ACTUAL_365 = 2;
+  DAY_COUNT_CONVENTION_THIRTY_360_ISMA = 3;
+}
+
+message BondValuationRequest {
+  string isin = 1;
+  uint64 clean_price_paise = 2;       // Clean price per unit (Paise, 10000 = INR 100.00)
+  int64 settlement_timestamp_ns = 3;  // Target settlement timestamp
+  uint64 quantity_units = 4;          // Number of bond units
+}
+
+message BondRiskMetrics {
+  uint32 yield_to_maturity_bps = 1;   // YTM in basis points (e.g. 715 = 7.15%)
+  uint64 macaulay_duration_days = 2;  // Macaulay duration in days
+  uint32 modified_duration_bps = 3;   // Modified duration (e.g. 680 = 6.80 years)
+  uint64 pv01_paise_per_unit = 4;     // Price value of 0.00% fee per unit in paise
+  uint64 convexity_e4 = 5;            // Convexity scaled by 10^4
+  uint32 money_market_discount_bps = 6; // For T-Bills (discount rate)
+  uint32 bond_equivalent_yield_bps = 7; // For T-Bills (BEY)
+}
+
+message DebtFeeBreakdown {
+  uint64 turnover_paise = 1;          // Gross trade value in paise
+  uint64 total_fee_paise = 2;         // 0.00% (No fee at all) platform fee
+  uint64 treasury_share_paise = 3;    // Governed by FeeController (0.00% at launch)
+  uint64 core_sgf_share_paise = 4;    // Governed by FeeController (0.00% at launch)
+  uint64 ipf_share_paise = 5;         // Governed by FeeController (0.00% at launch)
+}
+
+message BondValuationResponse {
+  string isin = 1;
+  uint64 clean_price_paise = 2;
+  uint64 accrued_interest_paise = 3;
+  uint64 dirty_price_paise = 4;
+  uint64 gross_settlement_amount_paise = 5;
+  uint32 accrued_days = 6;
+  uint32 days_in_period = 7;
+  BondRiskMetrics risk_metrics = 8;
+  DebtFeeBreakdown fee_breakdown = 9;
+  int64 calculated_at_ns = 10;
+}
+
+message NSSCalibrationParameters {
+  int64 calibrated_at_ns = 1;
+  double beta_0 = 2;                  // Long-term asymptotic level
+  double beta_1 = 3;                  // Short-term component
+  double beta_2 = 4;                  // Medium-term curvature 1
+  double beta_3 = 5;                  // Medium-term curvature 2
+  double tau_1 = 6;                   // Decay scale factor 1
+  double tau_2 = 7;                   // Decay scale factor 2
+  double root_mean_square_error_bps = 8;
+  uint32 active_benchmark_count = 9;
+}
+
+message GetYieldCurveRequest {
+  int64 as_of_timestamp_ns = 1;
+}
+
+message YieldCurvePoint {
+  double maturity_years = 1;
+  uint32 zero_coupon_yield_bps = 2;
+  uint32 par_yield_bps = 3;
+  uint32 forward_rate_bps = 4;
+}
+
+message GetYieldCurveResponse {
+  NSSCalibrationParameters nss_parameters = 1;
+  repeated YieldCurvePoint curve_points = 2;
+  int64 snapshot_timestamp_ns = 3;
+}
+
+message DirtyPriceLadderRequest {
+  string isin = 1;
+  int64 settlement_timestamp_ns = 2;
+}
+
+message PriceLadderLevel {
+  uint64 clean_price_paise = 1;
+  uint64 dirty_price_paise = 2;
+  uint32 ytm_bps = 3;
+  uint64 quantity_units = 4;
+}
+
+message DirtyPriceLadderResponse {
+  string isin = 1;
+  uint64 accrued_interest_paise = 2;
+  repeated PriceLadderLevel bids = 3;
+  repeated PriceLadderLevel asks = 4;
+  int64 generated_at_ns = 5;
+}
+
+service BondPricingService {
+  rpc CalculateBondValuation (BondValuationRequest) returns (BondValuationResponse);
+  rpc GetYieldCurve (GetYieldCurveRequest) returns (GetYieldCurveResponse);
+  rpc StreamDirtyPriceLadder (DirtyPriceLadderRequest) returns (stream DirtyPriceLadderResponse);
+}
