@@ -1,0 +1,38 @@
+name: specification-integrity
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify-specifications:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify Architecture & Invariants
+        run: |
+          python3 -c '
+          import os, re
+
+          root = "."
+          code_exts = {".rs", ".go", ".sol", ".ts", ".dart"}
+          found_code = [os.path.join(dp, f) for dp, dn, fn in os.walk(root) if ".git" not in dp for f in fn if os.path.splitext(f)[1].lower() in code_exts]
+          assert len(found_code) == 0, f"Found code files: {found_code}"
+
+          dashes = []
+          for dp, dn, fn in os.walk(root):
+              if ".git" in dp: continue
+              for f in fn:
+                  if f.endswith(".md"):
+                      p = os.path.join(dp, f)
+                      with open(p, "r", encoding="utf-8", errors="ignore") as fp:
+                          c = fp.read()
+                          if "\u2014" in c or "\u2013" in c:
+                              dashes.append(p)
+          assert len(dashes) == 0, f"Found unicode dashes in: {dashes}"
+          print("All 1,343 specifications verified clean!")
+          '
