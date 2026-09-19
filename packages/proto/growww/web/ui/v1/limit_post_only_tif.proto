@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+enum TimeInForce {
+  TIF_UNSPECIFIED = 0;
+  GTC = 1; // Good 'Til Cancelled
+  IOC = 2; // Immediate or Cancel
+  FOK = 3; // Fill or Kill
+}
+
+message LimitOrderRules {
+  bool post_only = 1;
+  TimeInForce tif = 2;
+}
+
+service LimitOrderRulesService {
+  rpc ValidateRules(LimitOrderRules) returns (LimitOrderRules);
+}
