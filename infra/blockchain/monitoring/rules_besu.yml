@@ -1,0 +1,56 @@
+# ==============================================================================
+# Hyperledger Besu QBFT Alert Rules (Prometheus Alert Rule Format)
+# Project: Growww NBSE Financial Exchange Permissioned Blockchain Ledger
+# File: infra/blockchain/monitoring/rules_besu.yml
+# ==============================================================================
+
+groups:
+  - name: BesuConsortiumAlerts
+    rules:
+      - alert: BesuConsensusStalled
+        expr: increase(besu_blockchain_chain_head_block_number{job="besu-validators"}[30s]) == 0
+        for: 10s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+        annotations:
+          summary: "Besu QBFT Consensus Stalled in Production"
+          description: "No new blocks produced on validator {{ $labels.instance }} for more than 10 seconds. Network may be partitioned or halted."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+      - alert: BesuValidatorHeightDivergence
+        expr: (max(besu_blockchain_chain_head_block_number) - min(besu_blockchain_chain_head_block_number)) > 3
+        for: 15s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+        annotations:
+          summary: "Validator Block Height Divergence Detected"
+          description: "One or more Besu validators are lagging behind the consortium head by more than 3 blocks."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+      - alert: BesuPeerCountCriticallyLow
+        expr: besu_peers_current{job="besu-validators"} < 3
+        for: 20s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+        annotations:
+          summary: "Validator Lost P2P Peer Connectivity"
+          description: "Validator {{ $labels.instance }} has fewer than 3 connected peers. Risk of losing consensus quorum."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-a-network-partition"
+
+      - alert: BesuQBFTRoundChangeTriggered
+        expr: increase(besu_qbft_round_number[1m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+        annotations:
+          summary: "QBFT Consensus Round Change Triggered"
+          description: "Validator leader timed out proposing a block, causing round change to next validator in round-robin."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-d-round-change-deadlock"

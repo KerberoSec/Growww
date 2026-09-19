@@ -1,0 +1,383 @@
+# ==============================================================================
+# Hyperledger Besu QBFT Consensus & Node Health Alert Rules
+# Project: Growww NBSE Financial Exchange Permissioned Blockchain Ledger
+# File: infra/blockchain/monitoring/alerts.yml
+# Target Destination: infra/blockchain/monitoring/alerts.yml
+# ==============================================================================
+
+groups:
+  # ============================================================================
+  # Group 1: QBFT Consensus Engine & Block Production Alerts
+  # ============================================================================
+  - name: BesuConsensusAlerts
+    rules:
+      # Critical: QBFT Consensus Halted (No new blocks produced across validators)
+      - alert: BesuConsensusStalled
+        expr: increase(besu_blockchain_chain_head_block_number{job="besu-validators"}[30s]) == 0
+        for: 10s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-consensus
+        annotations:
+          summary: "Besu QBFT Consensus Stalled in Production"
+          description: "No new blocks produced on validator {{ $labels.instance }} for more than 10 seconds. Expected block interval is 2.0s. Quorum may be lost or network partitioned."
+          impact: "Immediate freeze of DVP trade settlement, clearing batch execution, and proof-of-reserve attestation."
+          action_required: "Escalate immediately to Lead Blockchain SRE and execute RBK-OPS-310."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+      # Critical: Overall Consensus Block Production Rate Zero
+      - alert: BesuConsensusRateZero
+        expr: sum(rate(besu_blockchain_chain_head_block_number{job="besu-validators"}[1m])) == 0
+        for: 15s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-consensus
+        annotations:
+          summary: "Consortium-Wide Block Production Rate Zero"
+          description: "Aggregate block production rate across all Besu validator nodes has dropped to 0 for >= 15 seconds."
+          impact: "Complete ledger standstill across all consortium members."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+      # Warning: QBFT Consensus Round Change Triggered
+      - alert: BesuQBFTRoundChangeTriggered
+        expr: increase(besu_qbft_round_number{job="besu-validators"}[1m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-consensus
+        annotations:
+          summary: "QBFT Consensus Round Change Triggered"
+          description: "Validator leader on {{ $labels.instance }} timed out proposing a block within the 2.0s slot window, triggering a QBFT round change."
+          impact: "Sub-second jitter in block delivery. Potential leader proposer lag or Web3Signer latency."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-d-round-change-deadlock"
+
+      # Critical: High QBFT Round Number (> 2 indicates repeated consensus timeouts)
+      - alert: BesuQBFTHighRoundNumber
+        expr: besu_qbft_round_number{job="besu-validators"} > 2
+        for: 10s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-consensus
+        annotations:
+          summary: "Multiple Consecutive QBFT Round Changes"
+          description: "Node {{ $labels.instance }} is currently at QBFT round {{ $value }}. Multiple leaders have failed to produce accepted proposal."
+          impact: "Consensus is failing repeatedly to reach 2F+1 commit quorum."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+      # Critical: Validator Quorum Risk (Validator count in active set dropped)
+      - alert: BesuQBFTValidatorQuorumRisk
+        expr: besu_qbft_validator_count{job="besu-validators"} < 4
+        for: 30s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-consensus
+        annotations:
+          summary: "QBFT Active Validator Count Below Expected Threshold"
+          description: "Validator set count on {{ $labels.instance }} reports {{ $value }} active validators (expected: 4). Byzantine fault tolerance F=1 is degraded."
+          impact: "Single additional node failure will completely freeze consensus."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+  # ============================================================================
+  # Group 2: Validator Downtime & Height Divergence Alerts
+  # ============================================================================
+  - name: BesuValidatorHealthAlerts
+    rules:
+      # Critical: Single Validator Down / Unreachable
+      - alert: BesuValidatorDown
+        expr: up{job="besu-validators"} == 0
+        for: 15s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-node
+        annotations:
+          summary: "Besu Validator Node Down"
+          description: "Besu validator instance {{ $labels.instance }} is unreachable on Prometheus metrics port 9545."
+          impact: "Loss of validator redundancy. Consortium now operating with zero fault tolerance."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-b-validator-node-crash"
+
+      # Critical: Multiple Validators Down (Consensus Loss Imminent or Active)
+      - alert: BesuMultipleValidatorsDown
+        expr: count(up{job="besu-validators"} == 0) >= 2
+        for: 10s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-consensus
+        annotations:
+          summary: "CRITICAL: Multiple Besu Validators Offline"
+          description: "{{ $value }} validator nodes are offline simultaneously. Exceeds Byzantine fault tolerance F=(4-1)/3=1. Quorum impossible."
+          impact: "Consensus halted. Immediate emergency disaster response required."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-e-total-quorum-loss"
+
+      # Warning: Validator Block Height Divergence Across Consortium
+      - alert: BesuValidatorHeightDivergence
+        expr: (max(besu_blockchain_chain_head_block_number{job="besu-validators"}) - min(besu_blockchain_chain_head_block_number{job="besu-validators"})) > 3
+        for: 15s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-consensus
+        annotations:
+          summary: "Validator Block Height Divergence Detected"
+          description: "Consortium block height spread exceeds 3 blocks (delta: {{ $value }} blocks). One or more nodes are falling behind."
+          impact: "Risk of stale state reads and delayed transaction inclusion."
+          runbook_url: "docs/runbooks/RUNBOOK-20-blockchain-node-desync-and-deposit-replay.md"
+
+      # Critical: Specific Validator Desynced (> 5 blocks behind max head)
+      - alert: BesuValidatorDesynced
+        expr: (scalar(max(besu_blockchain_chain_head_block_number{job="besu-validators"})) - besu_blockchain_chain_head_block_number{job="besu-validators"}) > 5
+        for: 20s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-node
+        annotations:
+          summary: "Validator Seriously Desynchronized"
+          description: "Validator {{ $labels.instance }} is {{ $value }} blocks behind the consortium chain head."
+          impact: "Node unable to participate in current QBFT proposal round."
+          runbook_url: "docs/runbooks/RUNBOOK-20-blockchain-node-desync-and-deposit-replay.md"
+
+      # Warning: JSON-RPC Relayer Node Down
+      - alert: BesuRPCRelayerDown
+        expr: up{job="besu-rpc-nodes"} == 0
+        for: 30s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-rpc
+        annotations:
+          summary: "Besu JSON-RPC Relayer Gateway Down"
+          description: "RPC Relayer {{ $labels.instance }} is offline. Ingress traffic rerouted to redundant relayer."
+          impact: "Reduced relayer capacity and increased latency for trading engines."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+  # ============================================================================
+  # Group 3: P2P Network Mesh & High Peer Latency Alerts
+  # ============================================================================
+  - name: BesuPeerNetworkAlerts
+    rules:
+      # Critical: Validator Peer Count Critically Low (< 3 peers)
+      - alert: BesuPeerCountCriticallyLow
+        expr: besu_peers_current{job="besu-validators"} < 3
+        for: 20s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-p2p
+        annotations:
+          summary: "Validator Connected Peer Count Critically Low"
+          description: "Validator {{ $labels.instance }} has only {{ $value }} connected peers (minimum required: 3). Node is in danger of network partition."
+          impact: "Risk of consensus round messages not reaching quorum."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-a-network-partition"
+
+      # Critical: Validator Peer Count Dropped to Zero
+      - alert: BesuPeerCountZero
+        expr: besu_peers_current{job="besu-validators"} == 0
+        for: 10s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-p2p
+        annotations:
+          summary: "Validator Completely Isolated from P2P Network"
+          description: "Validator {{ $labels.instance }} has 0 connected peers. P2P communication port 30303 may be blocked or network interface down."
+          impact: "Node completely unable to validate or propose blocks."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-a-network-partition"
+
+      # Warning: High P2P Message Processing Latency (> 500ms)
+      - alert: BesuHighPeerMessageLatency
+        expr: rate(besu_network_p2p_messages_latency_seconds_sum[1m]) / rate(besu_network_p2p_messages_latency_seconds_count[1m]) > 0.5
+        for: 30s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-p2p
+        annotations:
+          summary: "Elevated P2P Message Round-Trip Latency"
+          description: "P2P network message latency on {{ $labels.instance }} is {{ $value | humanizeDuration }} (threshold: >500ms)."
+          impact: "Consensus commit messages delayed, risking QBFT proposal timeouts."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+      # Warning: Active Synthetic Prober Node Latency High (> 500ms)
+      - alert: BesuHighInterNodeLatencyProber
+        expr: growww_node_rpc_latency_seconds > 0.5
+        for: 30s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-probe
+        annotations:
+          summary: "Synthetic Health Prober Latency Spike"
+          description: "JSON-RPC probe response latency to {{ $labels.node }} is {{ $value }}s (> 500ms)."
+          impact: "Slow JSON-RPC response may cause exchange settlement timeout."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+  # ============================================================================
+  # Group 4: Web3Signer HSM Cryptographic Health Alerts
+  # ============================================================================
+  - name: Web3SignerAlerts
+    rules:
+      # Critical: Web3Signer Sidecar Offline
+      - alert: Web3SignerDown
+        expr: up{job="web3signer-sidecars"} == 0
+        for: 15s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: web3signer
+        annotations:
+          summary: "Web3Signer HSM Sidecar Offline"
+          description: "Web3Signer service for {{ $labels.node_target }} is down. Validator cannot produce ECDSA signatures for consensus."
+          impact: "Validator cannot sign QBFT PREPARE, COMMIT, or PROPOSAL payloads."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-c-web3signer-hsm-failure"
+
+      # Critical: Web3Signer Cryptographic Signing Failures
+      - alert: Web3SignerSigningErrors
+        expr: increase(web3signer_signing_failure_total[1m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: web3signer
+        annotations:
+          summary: "Web3Signer HSM Signing Failures Detected"
+          description: "Web3Signer instance {{ $labels.instance }} encountered {{ $value }} cryptographic signing errors in the last minute."
+          impact: "Consensus messages are unsigned or corrupted, failing validation on peer nodes."
+          runbook_url: "docs/ops/runbook_consensus_stall.md#scenario-c-web3signer-hsm-failure"
+
+      # Warning: Web3Signer HSM Latency High (> 100ms)
+      - alert: Web3SignerHighSigningLatency
+        expr: web3signer_signing_latency_seconds{quantile="0.99"} > 0.1
+        for: 30s
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: web3signer
+        annotations:
+          summary: "Web3Signer HSM Signing Latency Spike"
+          description: "p99 signing latency on {{ $labels.instance }} is {{ $value }}s (> 100ms)."
+          impact: "High latency in HSM sign requests threatens QBFT 2.0-second block time budget."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+  # ============================================================================
+  # Group 5: RocksDB Storage & System Resources Alerts
+  # ============================================================================
+  - name: BesuStorageAndHostAlerts
+    rules:
+      # Warning: NVMe Disk Free Space Low (< 15%)
+      - alert: BesuDiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint=~".*besu.*"} / node_filesystem_size_bytes{mountpoint=~".*besu.*"}) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-storage
+        annotations:
+          summary: "Besu RocksDB Disk Free Space Below 15%"
+          description: "NVMe volume for Besu state on {{ $labels.instance }} has less than 15% free space remaining."
+          impact: "Risk of disk exhaustion leading to RocksDB crash or data corruption."
+          runbook_url: "docs/runbooks/RUNBOOK-14-besu-bonsai-trie-storage-pruning.md"
+
+      # Critical: NVMe Disk Free Space Critical (< 5%)
+      - alert: BesuDiskSpaceCritical
+        expr: (node_filesystem_avail_bytes{mountpoint=~".*besu.*"} / node_filesystem_size_bytes{mountpoint=~".*besu.*"}) < 0.05
+        for: 1m
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-storage
+        annotations:
+          summary: "CRITICAL: Besu RocksDB Disk Free Space Below 5%"
+          description: "Imminent disk exhaustion on {{ $labels.instance }}. Less than 5% free space remaining."
+          impact: "Node will halt state commit and crash immediately if volume fills."
+          runbook_url: "docs/runbooks/RUNBOOK-14-besu-bonsai-trie-storage-pruning.md"
+
+      # Warning: RocksDB Read Compaction Latency High (> 250ms)
+      - alert: BesuRocksDBCompactionLatencyHigh
+        expr: (rate(besu_rocksdb_read_latency_seconds_sum[1m]) / rate(besu_rocksdb_read_latency_seconds_count[1m])) > 0.25
+        for: 1m
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-storage
+        annotations:
+          summary: "High RocksDB Read/Write Latency"
+          description: "Average RocksDB read latency on {{ $labels.instance }} is {{ $value }}s (> 250ms)."
+          impact: "Bonsai Trie storage I/O bottleneck slowing block validation."
+          runbook_url: "docs/runbooks/RUNBOOK-14-besu-bonsai-trie-storage-pruning.md"
+
+      # Warning: JVM Heap Memory Exhaustion (> 90%)
+      - alert: BesuJVMHeapUsageHigh
+        expr: (jvm_memory_bytes_used{area="heap",job=~"besu-.*"} / jvm_memory_bytes_max{area="heap",job=~"besu-.*"}) > 0.90
+        for: 2m
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-jvm
+        annotations:
+          summary: "Besu JVM Heap Memory Above 90%"
+          description: "Heap utilization on {{ $labels.instance }} is {{ $value | humanizePercentage }}."
+          impact: "Increased risk of long G1GC stop-the-world pauses or OutOfMemoryError crashes."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+  # ============================================================================
+  # Group 6: Transaction Pool & RPC Worker Queue Alerts
+  # ============================================================================
+  - name: BesuTransactionPoolAlerts
+    rules:
+      # Critical: RPC Relayer Worker Pool Queue Saturated (> 100)
+      - alert: BesuRPCWorkerQueueSaturated
+        expr: besu_executors_worker_work_queue{job="besu-rpc-nodes"} > 100
+        for: 30s
+        labels:
+          severity: critical
+          team: blockchain-ops
+          priority: P1
+          component: besu-rpc
+        annotations:
+          summary: "JSON-RPC Worker Queue Saturated"
+          description: "RPC queue depth on {{ $labels.instance }} is {{ $value }} (threshold: >100)."
+          impact: "Exchange settlement transactions and order settlement batches are timing out."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
+
+      # Warning: Transaction Pool Congestion (> 4,096 transactions)
+      - alert: BesuTxPoolCongested
+        expr: besu_transaction_pool_transactions_count > 4096
+        for: 1m
+        labels:
+          severity: warning
+          team: blockchain-ops
+          priority: P2
+          component: besu-mempool
+        annotations:
+          summary: "Besu Transaction Pool Congestion"
+          description: "Pending transaction pool count on {{ $labels.instance }} is {{ $value }}."
+          impact: "Increased settlement latency for DVP trade clearing."
+          runbook_url: "docs/ops/runbook_consensus_stall.md"
