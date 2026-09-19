@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message BatchCancelRequest {
+  string filter_side = 1; // "BUY", "SELL", or "ALL"
+  string symbol = 2;
+}
+
+service BatchOrderActionService {
+  rpc CancelBatch(BatchCancelRequest) returns (BatchCancelRequest);
+}
