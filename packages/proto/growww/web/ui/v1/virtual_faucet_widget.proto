@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message VirtualFaucetClaim {
+  string user_id = 1;
+  double vusdt_claimed = 2;
+  double vbtc_claimed = 3;
+}
+
+service VirtualFaucetService {
+  rpc ClaimTokens(VirtualFaucetClaim) returns (VirtualFaucetClaim);
+}
