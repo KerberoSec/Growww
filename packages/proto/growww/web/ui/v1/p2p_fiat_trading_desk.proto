@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message MerchantAdConfig {
+  string merchant_id = 1;
+  string side = 2; // "BUY" or "SELL"
+  double price_inr = 3;
+  double min_limit_inr = 4;
+  double max_limit_inr = 5;
+}
+
+service P2PMerchantDeskService {
+  rpc PostAdvertisement(MerchantAdConfig) returns (MerchantAdConfig);
+}
