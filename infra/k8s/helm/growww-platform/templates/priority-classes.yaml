@@ -1,0 +1,31 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: critical-trading
+value: 1000000
+globalDefault: false
+description: "Ultra-high priority dedicated to Order Matching Engine and real-time trading pipelines to prevent eviction during cluster pressure."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: core-settlement
+value: 900000
+globalDefault: false
+description: "High priority dedicated to DvP settlement coordinators, clearing gateways, and blockchain validator nodes."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: general-service
+value: 500000
+globalDefault: true
+description: "Default priority for user-facing API gateways, BFFs, compliance services, and portfolio backends."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: batch-worker
+value: 100000
+globalDefault: false
+description: "Low priority for asynchronous reporting, tax calculation, and analytics batch jobs subject to preemption."

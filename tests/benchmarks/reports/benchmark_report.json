@@ -1,0 +1,17 @@
+{
+  "total_orders": 50000,
+  "matched_trades": 41410,
+  "elapsed_seconds": 0.2316,
+  "throughput_ops": 215854.22,
+  "p50_latency_us": 3.0,
+  "p90_latency_us": 6.9,
+  "p95_latency_us": 9.4,
+  "p99_latency_us": 21.0,
+  "p999_latency_us": 56.0,
+  "max_latency_us": 4233.402,
+  "min_latency_us": 0.2,
+  "mean_latency_us": 4.109,
+  "sla_p99_passed": true,
+  "invariants_passed": true,
+  "error_message": null
+}

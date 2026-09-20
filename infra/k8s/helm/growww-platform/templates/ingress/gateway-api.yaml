@@ -1,0 +1,38 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: growww-production-gateway
+  namespace: growww-core
+  labels:
+    app.kubernetes.io/name: growww-production-gateway
+spec:
+  gatewayClassName: envoy-gateway
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    hostname: {{ .Values.ingress.apiHost | default "api.exchange.growww.in" | quote }}
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: growww-edge-tls-cert
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api-gateway-route
+  namespace: growww-core
+spec:
+  parentRefs:
+  - name: growww-production-gateway
+  hostnames:
+  - {{ .Values.ingress.apiHost | default "api.exchange.growww.in" | quote }}
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api/v1
+    backendRefs:
+    - name: api-gateway
+      port: 8080

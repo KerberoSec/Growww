@@ -1,0 +1,29 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: gateway-to-trading-latency
+  namespace: growww-core
+  labels:
+    app.kubernetes.io/component: chaos-test
+    chaos.growww.in/target: api-gateway-egress
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - growww-core
+    labelSelectors:
+      app.kubernetes.io/name: "api-gateway"
+  delay:
+    latency: "500ms"
+    jitter: "50ms"
+    correlation: "25"
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - growww-trading
+      labelSelectors:
+        app.kubernetes.io/name: "order-matching-engine"
+    mode: all
+  duration: "1m"

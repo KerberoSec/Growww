@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  envoy-edge-proxy:
+    image: envoyproxy/envoy:v1.30.1
+    container_name: growww-envoy-edge
+    ports:
+      - "8443:8443"
+      - "9901:9901"
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./filters:/etc/envoy/filters:ro
+    command: "/usr/local/bin/envoy -c /etc/envoy/envoy.yaml --log-level info"
+    restart: unless-stopped
+
+  ratelimit-service:
+    image: envoyproxy/ratelimit:v1.6.0
+    container_name: growww-ratelimit-srv
+    ports:
+      - "8081:8081"
+      - "6070:6070"
+    environment:
+      - USE_STATSD=false
+      - LOG_LEVEL=debug
+      - REDIS_SOCKET_TYPE=tcp
+      - REDIS_URL=redis:6379
+      - RUNTIME_ROOT=/data
+      - RUNTIME_SUBDIRECTORY=ratelimit
+    volumes:
+      - ./config:/data/ratelimit/config:ro
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: growww-ratelimit-redis
+    ports:
+      - "6379:6379"

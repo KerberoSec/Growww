@@ -1,0 +1,23 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 3,
+      "number_of_replicas": 2
+    }
+  },
+  "mappings": {
+    "properties": {
+      "alert_id": { "type": "keyword" },
+      "alert_type": { "type": "keyword" },
+      "severity": { "type": "keyword" },
+      "isin": { "type": "keyword" },
+      "symbol": { "type": "keyword" },
+      "participants": { "type": "keyword" },
+      "confidence_score": { "type": "float" },
+      "description": { "type": "text" },
+      "evidence": { "type": "object", "enabled": true },
+      "status": { "type": "keyword" },
+      "detected_at": { "type": "date" }
+    }
+  }
+}

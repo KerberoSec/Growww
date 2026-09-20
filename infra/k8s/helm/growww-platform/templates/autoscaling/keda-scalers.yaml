@@ -1,0 +1,39 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: settlement-worker-scaler
+  namespace: growww-settlement
+  labels:
+    app.kubernetes.io/name: settlement-worker-scaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: trade-settlement-service
+  minReplicaCount: 3
+  maxReplicaCount: 30
+  cooldownPeriod: 60
+  pollingInterval: 15
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Percent
+            value: 20
+            periodSeconds: 60
+  triggers:
+  - type: kafka
+    metadata:
+      bootstrapServers: kafka.growww-core.svc.cluster.local:9092
+      consumerGroup: settlement-orchestrator-group
+      topic: trades.executed.v1
+      lagThreshold: "25"

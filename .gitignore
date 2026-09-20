@@ -67,4 +67,5 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
-cache/
+/cache/
+!database/redis/cache/

@@ -1,0 +1,64 @@
+global:
+  environment: "prod-mumbai"
+  region: "ap-south-1"
+  clusterDomain: "cluster.local"
+
+apiGateway:
+  replicas: 12
+  image:
+    repository: "ghcr.io/growww/api-gateway"
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: "4000m"
+      memory: "8Gi"
+    limits:
+      cpu: "8000m"
+      memory: "16Gi"
+  hpa:
+    minReplicas: 12
+    maxReplicas: 100
+
+matchingEngine:
+  replicas: 3
+  image:
+    repository: "ghcr.io/growww/order-matching-engine"
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: "16000m"
+      memory: "32Gi"
+    limits:
+      cpu: "32000m"
+      memory: "64Gi"
+
+fixGateway:
+  replicas: 6
+  image:
+    repository: "ghcr.io/growww/fix-protocol-gateway"
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: "8000m"
+      memory: "16Gi"
+    limits:
+      cpu: "16000m"
+      memory: "32Gi"
+
+settlementService:
+  replicas: 6
+  image:
+    repository: "ghcr.io/growww/trade-settlement-service"
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: "4000m"
+      memory: "8Gi"
+    limits:
+      cpu: "8000m"
+      memory: "16Gi"
+
+ingress:
+  enabled: true
+  host: "mumbai.exchange.growww.in"
+  apiHost: "api.exchange.growww.in"

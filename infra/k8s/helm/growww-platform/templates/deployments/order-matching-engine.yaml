@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-matching-engine
+  namespace: growww-trading
+  labels:
+    app.kubernetes.io/name: order-matching-engine
+    app.kubernetes.io/component: matching-engine
+    app.kubernetes.io/part-of: growww-platform
+spec:
+  replicas: {{ .Values.matchingEngine.replicas | default 3 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-matching-engine
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: order-matching-engine
+        app.kubernetes.io/component: matching-engine
+        app.kubernetes.io/part-of: growww-platform
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2112"
+        prometheus.io/path: "/metrics"
+    spec:
+      priorityClassName: critical-trading
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - cpu-trading
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - order-matching-engine
+            topologyKey: topology.kubernetes.io/zone
+      tolerations:
+      - key: "trading-workload"
+        operator: "Equal"
+        value: "critical"
+        effect: "NoSchedule"
+      containers:
+      - name: matching-engine
+        image: "{{ .Values.matchingEngine.image.repository | default "ghcr.io/growww/order-matching-engine" }}:{{ .Values.matchingEngine.image.tag | default "latest" }}"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: grpc
+          containerPort: 9001
+          protocol: TCP
+        - name: metrics
+          containerPort: 2112
+          protocol: TCP
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: SYMBOLS
+          value: "RELIANCE,TCS,HDFCBANK,INFY,ICICIBANK"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.growww-core.svc.cluster.local:9092"
+        - name: REDIS_URL
+          value: "redis://redis.growww-core.svc.cluster.local:6379"
+        resources:
+          requests:
+            cpu: {{ .Values.matchingEngine.resources.requests.cpu | default "8000m" }}
+            memory: {{ .Values.matchingEngine.resources.requests.memory | default "16Gi" }}
+          limits:
+            cpu: {{ .Values.matchingEngine.resources.limits.cpu | default "16000m" }}
+            memory: {{ .Values.matchingEngine.resources.limits.memory | default "32Gi" }}
+        livenessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 2
+          periodSeconds: 2
+          timeoutSeconds: 1
+          failureThreshold: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-matching-engine
+  namespace: growww-trading
+  labels:
+    app.kubernetes.io/name: order-matching-engine
+spec:
+  type: ClusterIP
+  ports:
+  - name: grpc
+    port: 9001
+    targetPort: 9001
+    protocol: TCP
+  - name: metrics
+    port: 2112
+    targetPort: 2112
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: order-matching-engine
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-matching-engine-pdb
+  namespace: growww-trading
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-matching-engine

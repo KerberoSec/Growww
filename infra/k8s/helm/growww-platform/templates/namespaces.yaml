@@ -1,0 +1,19 @@
+{{- $namespaces := list "growww-core" "growww-trading" "growww-settlement" "growww-gift-city" "growww-blockchain" "growww-secops" "growww-observability" -}}
+{{- range $ns := $namespaces }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $ns }}
+  labels:
+    app.kubernetes.io/part-of: growww-platform
+    environment: {{ $.Values.global.environment | default "prod" | quote }}
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    istio-injection: enabled
+    cilium.io/policy-enforcement: default
+{{- end }}

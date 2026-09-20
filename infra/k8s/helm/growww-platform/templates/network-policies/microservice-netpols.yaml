@@ -1,0 +1,224 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-gateway-netpol
+  namespace: growww-core
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: envoy-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-trading
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: order-matching-engine
+    ports:
+    - protocol: TCP
+      port: 9001
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-settlement
+    ports:
+    - protocol: TCP
+      port: 9002
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: trading-netpol
+  namespace: growww-trading
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: order-matching-engine
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: api-gateway
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: fix-gateway
+    ports:
+    - protocol: TCP
+      port: 9001
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-observability
+    ports:
+    - protocol: TCP
+      port: 2112
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: settlement-to-blockchain-netpol
+  namespace: growww-settlement
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: trade-settlement-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+    ports:
+    - protocol: TCP
+      port: 9002
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-blockchain
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: besu-validator
+    ports:
+    - protocol: TCP
+      port: 8545
+    - protocol: TCP
+      port: 8546
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-core
+    ports:
+    - protocol: TCP
+      port: 9092
+    - protocol: TCP
+      port: 5432
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blockchain-netpol
+  namespace: growww-blockchain
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: besu-validator
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-settlement
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: trade-settlement-service
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: growww-observability
+    ports:
+    - protocol: TCP
+      port: 8545
+    - protocol: TCP
+      port: 8546
+  - from:
+    - ipBlock:
+        cidr: 10.100.20.0/24
+    ports:
+    - protocol: TCP
+      port: 30303
+    - protocol: UDP
+      port: 30303
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.100.20.0/24
+    ports:
+    - protocol: TCP
+      port: 30303
+    - protocol: UDP
+      port: 30303

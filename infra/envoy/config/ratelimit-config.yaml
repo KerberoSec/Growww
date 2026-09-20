@@ -1,0 +1,64 @@
+# ==============================================================================
+# Growww Sovereign Exchange - Envoy RateLimit Service Descriptor Configuration
+# Domain: growww-gateway-limits
+# Compliant with SEBI Fair-Access & Algorithmic Trading Safeguards
+# ==============================================================================
+
+domain: growww-gateway-limits
+descriptors:
+  # Defense against brute-force & credential stuffing on authentication endpoints
+  - key: generic_key
+    value: auth_login
+    descriptors:
+      - key: remote_address
+        rate_limit:
+          unit: minute
+          requests_per_unit: 5
+
+  # Tiered Order Placement Limits
+  - key: generic_key
+    value: orders
+    descriptors:
+      # Tier 0: Unauthenticated / Guest Users
+      - key: user_tier
+        value: tier0_public
+        rate_limit:
+          unit: second
+          requests_per_unit: 10
+
+      # Tier 1: Verified Retail Clients (Standard Web & Mobile)
+      - key: user_tier
+        value: tier1_retail
+        rate_limit:
+          unit: second
+          requests_per_unit: 100
+
+      # Tier 2: Institutional & HNI API Clients (Signed FIX/REST API)
+      - key: user_tier
+        value: tier2_institutional
+        rate_limit:
+          unit: second
+          requests_per_unit: 2000
+
+      # Tier 3: Co-Located Market Makers & Designated Liquidity Providers
+      - key: user_tier
+        value: tier3_market_maker
+        rate_limit:
+          unit: second
+          requests_per_unit: 10000
+
+  # High-Concurrency Public Market Data Streaming
+  - key: generic_key
+    value: market_data
+    descriptors:
+      - key: remote_address
+        rate_limit:
+          unit: second
+          requests_per_unit: 500
+
+  # Settlement Pipeline & Blockchain Clearing Orchestration
+  - key: generic_key
+    value: settlement
+    rate_limit:
+      unit: second
+      requests_per_unit: 1000

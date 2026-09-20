@@ -1,0 +1,22 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: besu-validator-isolation
+  namespace: growww-blockchain
+  labels:
+    app.kubernetes.io/component: chaos-test
+    chaos.growww.in/target: besu-qbft-consensus
+spec:
+  action: partition
+  mode: fixed
+  value: "1"
+  selector:
+    namespaces:
+      - growww-blockchain
+    labelSelectors:
+      app.kubernetes.io/name: "besu-validator"
+      validator-index: "3"
+  direction: both
+  duration: "5m"
+  scheduler:
+    cron: "0 2 * * 2" # Weekly automated run

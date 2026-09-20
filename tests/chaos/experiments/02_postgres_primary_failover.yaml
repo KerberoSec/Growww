@@ -1,0 +1,19 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: postgres-primary-kill
+  namespace: growww-core
+  labels:
+    app.kubernetes.io/component: chaos-test
+    chaos.growww.in/target: postgresql-primary
+spec:
+  action: pod-kill
+  mode: fixed
+  value: "1"
+  selector:
+    namespaces:
+      - growww-core
+    labelSelectors:
+      role: "master"
+      app: "postgres-patroni"
+  duration: "1m"

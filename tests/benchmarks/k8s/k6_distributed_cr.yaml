@@ -1,0 +1,30 @@
+apiVersion: k6.io/v1alpha1
+kind: K6
+metadata:
+  name: matching-engine-load-test
+  namespace: growww-observability
+spec:
+  parallelism: 20
+  script:
+    configMap:
+      name: k6-test-scripts
+      file: order_placement_burst.js
+  arguments: --out statsd --tag test_id=nbse-load-run-50k
+  runner:
+    image: grafana/k6:0.51.0
+    resources:
+      requests:
+        cpu: "2000m"
+        memory: "2Gi"
+      limits:
+        cpu: "4000m"
+        memory: "4Gi"
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-tier
+              operator: In
+              values:
+              - general-compute

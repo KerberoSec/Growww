@@ -1,0 +1,27 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 3,
+      "number_of_replicas": 2,
+      "blocks": {
+        "read_only_allow_delete": null
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "event_id": { "type": "keyword" },
+      "action": { "type": "keyword" },
+      "actor_id": { "type": "keyword" },
+      "actor_role": { "type": "keyword" },
+      "entity_type": { "type": "keyword" },
+      "entity_id": { "type": "keyword" },
+      "correlation_id": { "type": "keyword" },
+      "client_ip": { "type": "ip" },
+      "before_state": { "type": "object", "enabled": true },
+      "after_state": { "type": "object", "enabled": true },
+      "tamper_hash": { "type": "keyword" },
+      "timestamp": { "type": "date" }
+    }
+  }
+}

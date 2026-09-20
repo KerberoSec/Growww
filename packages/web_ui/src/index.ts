@@ -33,3 +33,8 @@ export * from './components/security_center';
 export * from './components/antiphishing_phrase_verification_shield';
 export * from './components/active_sessions_manager';
 export * from './components/clearing_member_capital_adequacy_monitor';
+export * from './components/options_strategy_payoff_diagram';
+export * from './components/cross_asset_collateral_slider';
+export * from './components/institutional_rfq_negotiation_window';
+export * from './components/hotkey_macro_config_modal';
+export * from './components/detached_multi_window_layout_manager';

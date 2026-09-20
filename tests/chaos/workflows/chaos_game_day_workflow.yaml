@@ -1,0 +1,94 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: growww-resilience-game-day
+  namespace: growww-observability
+  labels:
+    app.kubernetes.io/component: chaos-workflow
+    compliance.growww.in/audit: "sebi-disaster-recovery-drill"
+spec:
+  entry: serial-disaster-injection
+  templates:
+    - name: serial-disaster-injection
+      templateType: Serial
+      children:
+        # Phase 1: Order Matching Engine Pod Kill Drill
+        - step-ome-pod-kill
+        - step-wait-recovery-30s
+
+        # Phase 2: PostgreSQL Primary Crash Under Active Order Load
+        - step-postgres-primary-kill
+        - step-wait-recovery-30s
+
+        # Phase 3: Kafka Broker Partition Drill
+        - step-kafka-broker-isolation
+        - step-wait-recovery-30s
+
+        # Phase 4: Besu QBFT Consensus 1-Validator Isolation
+        - step-besu-validator-isolation
+        - step-wait-recovery-30s
+
+    - name: step-ome-pod-kill
+      templateType: Chaos
+      chaos:
+        podChaos:
+          action: pod-kill
+          mode: fixed
+          value: "1"
+          selector:
+            namespaces:
+              - growww-trading
+            labelSelectors:
+              app.kubernetes.io/name: "order-matching-engine"
+          duration: "30s"
+
+    - name: step-postgres-primary-kill
+      templateType: Chaos
+      chaos:
+        podChaos:
+          action: pod-kill
+          mode: fixed
+          value: "1"
+          selector:
+            namespaces:
+              - growww-core
+            labelSelectors:
+              role: "master"
+              app: "postgres-patroni"
+          duration: "45s"
+
+    - name: step-kafka-broker-isolation
+      templateType: Chaos
+      chaos:
+        networkChaos:
+          action: partition
+          mode: fixed
+          value: "1"
+          selector:
+            namespaces:
+              - growww-core
+            labelSelectors:
+              app.kubernetes.io/name: "kafka"
+              statefulset.kubernetes.io/pod-name: "kafka-1"
+          direction: both
+          duration: "60s"
+
+    - name: step-besu-validator-isolation
+      templateType: Chaos
+      chaos:
+        networkChaos:
+          action: partition
+          mode: fixed
+          value: "1"
+          selector:
+            namespaces:
+              - growww-blockchain
+            labelSelectors:
+              app.kubernetes.io/name: "besu-validator"
+              validator-index: "3"
+          direction: both
+          duration: "90s"
+
+    - name: step-wait-recovery-30s
+      templateType: Suspend
+      deadline: "30s"

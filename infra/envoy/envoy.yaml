@@ -1,0 +1,276 @@
+static_resources:
+  listeners:
+  - name: edge_ingress_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 8443
+    per_connection_buffer_limit_bytes: 32768
+    filter_chains:
+    - transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          common_tls_context:
+            tls_params:
+              tls_minimum_protocol_version: TLSv1_3
+              cipher_suites:
+              - "TLS_AES_256_GCM_SHA384"
+              - "TLS_CHACHA20_POLY1305_SHA256"
+              ecdh_curves:
+              - "X25519"
+              - "P-256"
+            tls_certificates:
+            - certificate_chain: { filename: "/etc/envoy/certs/server.crt" }
+              private_key: { filename: "/etc/envoy/certs/server.key" }
+      filters:
+      # Layer 1: Connection Flooding & SYN Flood Mitigation
+      - name: envoy.filters.network.connection_limit
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+          stat_prefix: ingress_conn_limit
+          max_connections: 50000
+          delay: 0.05s
+
+      # Layer 2: HTTP Connection Manager with Deep Packet Inspection & Multi-Tier Rate Limiting
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          codec_type: AUTO
+          stream_idle_timeout: 30s
+          request_timeout: 10s
+          delayed_close_timeout: 1s
+          use_remote_address: true
+          xff_num_trusted_hops: 1
+          normalize_path: true
+          merge_slashes: true
+
+          http_filters:
+          # Layer 3: Local In-Memory Rate Limiting (Instant Burst Defense)
+          - name: envoy.filters.http.local_ratelimit
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+              stat_prefix: http_local_rate_limiter
+              status:
+                code: TooManyRequests
+              token_bucket:
+                max_tokens: 10000
+                tokens_per_fill: 5000
+                fill_interval: 1s
+              filter_enabled:
+                runtime_key: local_rate_limit_enabled
+                default_value:
+                  numerator: 100
+                  denominator: HUNDRED
+              filter_enforced:
+                runtime_key: local_rate_limit_enforced
+                default_value:
+                  numerator: 100
+                  denominator: HUNDRED
+              response_headers_to_add:
+              - header:
+                  key: x-ratelimit-limit
+                  value: "10000"
+              - header:
+                  key: x-ratelimit-remaining
+                  value: "0"
+
+          # Layer 4: RBAC & CIDR Whitelisting Filter
+          - name: envoy.filters.http.rbac
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+              rules:
+                action: ALLOW
+                policies:
+                  allow_public_endpoints:
+                    permissions:
+                    - url_path: { path: { prefix: "/api/v1/" } }
+                    - url_path: { path: { exact: "/healthz" } }
+                    principals:
+                    - any: true
+
+          # Layer 5: Lua DDoS Mitigation Script (Anomaly & Replay Protection)
+          - name: envoy.filters.http.lua
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+              default_source_code:
+                filename: /etc/envoy/filters/ddos_mitigation.lua
+
+          # Layer 6: Global Distributed Rate Limiting (Redis-Backed gRPC)
+          - name: envoy.filters.http.ratelimit
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+              domain: growww-gateway-limits
+              failure_mode_deny: false
+              timeout: 0.05s
+              rate_limit_service:
+                transport_api_version: V3
+                grpc_service:
+                  envoy_grpc:
+                    cluster_name: ratelimit_service
+
+          # Layer 7: Adaptive Concurrency (Prevents Downstream Cascade Saturation)
+          - name: envoy.filters.http.adaptive_concurrency
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.adaptive_concurrency.v3.AdaptiveConcurrency
+              gradient_controller_config:
+                sample_aggregate_percentile:
+                  value: 90
+                concurrency_limit_params:
+                  max_concurrency_limit: 10000
+                  concurrency_update_interval: 0.1s
+                min_rtt_calc_params:
+                  jitter:
+                    value: 10
+                  interval: 60s
+                  request_count: 50
+
+          # Layer 8: Router Filter
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+          route_config:
+            name: sovereign_edge_routes
+            virtual_hosts:
+            - name: growww_exchange_vhost
+              domains: ["*"]
+              routes:
+              - match: { prefix: "/healthz" }
+                route: { cluster: api_gateway_cluster }
+              
+              - match: { prefix: "/api/v1/auth/login" }
+                route:
+                  cluster: api_gateway_cluster
+                  rate_limits:
+                  - actions:
+                    - generic_key: { descriptor_value: "auth_login" }
+                    - remote_address: {}
+
+              - match: { prefix: "/api/v1/orders" }
+                route:
+                  cluster: matching_engine_cluster
+                  timeout: 2s
+                  rate_limits:
+                  - actions:
+                    - generic_key: { descriptor_value: "orders" }
+                    - request_headers:
+                        header_name: "x-user-tier"
+                        descriptor_key: "user_tier"
+
+              - match: { prefix: "/api/v1/market" }
+                route:
+                  cluster: market_data_cluster
+                  rate_limits:
+                  - actions:
+                    - generic_key: { descriptor_value: "market_data" }
+                    - remote_address: {}
+
+              - match: { prefix: "/api/v1/settlement" }
+                route:
+                  cluster: settlement_cluster
+                  rate_limits:
+                  - actions:
+                    - generic_key: { descriptor_value: "settlement" }
+
+  clusters:
+  # Upstream: Order Matching Engine with Circuit Breakers & Outlier Detection
+  - name: matching_engine_cluster
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    connect_timeout: 0.25s
+    circuit_breakers:
+      thresholds:
+      - priority: DEFAULT
+        max_connections: 5000
+        max_pending_requests: 10000
+        max_requests: 50000
+        max_retries: 3
+    outlier_detection:
+      consecutive_5xx: 3
+      interval: 10s
+      base_ejection_time: 30s
+      max_ejection_percent: 50
+    load_assignment:
+      cluster_name: matching_engine_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: order-matching-engine.growww-trading.svc.cluster.local
+                port_value: 9001
+
+  # Upstream: API Gateway Service
+  - name: api_gateway_cluster
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    connect_timeout: 0.5s
+    circuit_breakers:
+      thresholds:
+      - priority: DEFAULT
+        max_connections: 10000
+        max_pending_requests: 20000
+        max_requests: 100000
+    load_assignment:
+      cluster_name: api_gateway_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: api-gateway.growww-core.svc.cluster.local
+                port_value: 8080
+
+  # Upstream: Rate Limiting gRPC Service
+  - name: ratelimit_service
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    http2_protocol_options: {}
+    connect_timeout: 0.05s
+    load_assignment:
+      cluster_name: ratelimit_service
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: rate-limiting-service.growww-core.svc.cluster.local
+                port_value: 8081
+
+  # Upstream: Market Data Service
+  - name: market_data_cluster
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    connect_timeout: 0.5s
+    load_assignment:
+      cluster_name: market_data_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: market-data-service.growww-core.svc.cluster.local
+                port_value: 8082
+
+  # Upstream: Trade Settlement Service
+  - name: settlement_cluster
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    connect_timeout: 0.5s
+    load_assignment:
+      cluster_name: settlement_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: trade-settlement-service.growww-settlement.svc.cluster.local
+                port_value: 9002
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901

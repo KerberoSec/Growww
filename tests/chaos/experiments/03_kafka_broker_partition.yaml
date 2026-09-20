@@ -1,0 +1,20 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: kafka-broker-isolation
+  namespace: growww-core
+  labels:
+    app.kubernetes.io/component: chaos-test
+    chaos.growww.in/target: kafka-cluster
+spec:
+  action: partition
+  mode: fixed
+  value: "1"
+  selector:
+    namespaces:
+      - growww-core
+    labelSelectors:
+      app.kubernetes.io/name: "kafka"
+      statefulset.kubernetes.io/pod-name: "kafka-1"
+  direction: both
+  duration: "2m"

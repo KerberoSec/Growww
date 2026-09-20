@@ -1,0 +1,88 @@
+# Declarative specifications for Karpenter NodePool / EKS Managed NodeGroup topologies
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: cpu-trading-pool
+  labels:
+    node-tier: cpu-trading
+spec:
+  template:
+    metadata:
+      labels:
+        node-type: cpu-trading
+        compliance.growww.in/workload: low-latency-trading
+    spec:
+      taints:
+      - key: trading-workload
+        value: critical
+        effect: NoSchedule
+      requirements:
+      - key: kubernetes.io/arch
+        operator: In
+        values: ["amd64"]
+      - key: karpenter.k8s.aws/instance-family
+        operator: In
+        values: ["c6i", "c7i"]
+      - key: karpenter.k8s.aws/instance-size
+        operator: In
+        values: ["4xlarge", "8xlarge", "16xlarge"]
+      - key: topology.kubernetes.io/zone
+        operator: In
+        values: ["ap-south-1a", "ap-south-1b", "ap-south-1c"]
+---
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: blockchain-validator-pool
+  labels:
+    node-tier: blockchain-nvme
+spec:
+  template:
+    metadata:
+      labels:
+        node-type: blockchain-validator
+        compliance.growww.in/workload: consortium-ledger
+    spec:
+      taints:
+      - key: blockchain-workload
+        value: validator
+        effect: NoSchedule
+      requirements:
+      - key: kubernetes.io/arch
+        operator: In
+        values: ["amd64"]
+      - key: karpenter.k8s.aws/instance-family
+        operator: In
+        values: ["i3en", "i4i"]
+      - key: karpenter.k8s.aws/instance-size
+        operator: In
+        values: ["3xlarge", "6xlarge"]
+      - key: topology.kubernetes.io/zone
+        operator: In
+        values: ["ap-south-1a", "ap-south-1b", "ap-south-1c"]
+---
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: general-compute-pool
+  labels:
+    node-tier: general-compute
+spec:
+  template:
+    metadata:
+      labels:
+        node-tier: general-compute
+    spec:
+      requirements:
+      - key: kubernetes.io/arch
+        operator: In
+        values: ["amd64", "arm64"]
+      - key: karpenter.k8s.aws/instance-family
+        operator: In
+        values: ["m6i", "m7g"]
+      - key: karpenter.k8s.aws/instance-size
+        operator: In
+        values: ["2xlarge", "4xlarge"]
+      - key: topology.kubernetes.io/zone
+        operator: In
+        values: ["ap-south-1a", "ap-south-1b", "ap-south-1c"]
