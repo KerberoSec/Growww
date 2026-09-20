@@ -1,0 +1,230 @@
+# ==============================================================================
+# Hyperledger Besu QBFT Consortium Prometheus Monitoring Configuration
+# Project: Growww NBSE Financial Exchange Permissioned Blockchain Ledger
+# File: infra/blockchain/monitoring/prometheus.yml
+# Target Destination: infra/blockchain/monitoring/prometheus.yml
+# ==============================================================================
+
+global:
+  scrape_interval: 15s           # Default scrape interval for host and system metrics
+  scrape_timeout: 10s            # Default scrape timeout
+  evaluation_interval: 5s        # 5-second evaluation loop for real-time QBFT consensus alerts
+  external_labels:
+    environment: "production"
+    consortium: "growww-nbse"
+    chain_id: "13370"
+    consensus_engine: "qbft"
+    cluster: "prod-besu-consortium"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - scheme: http
+      path_prefix: /
+      timeout: 5s
+      static_configs:
+        - targets:
+            - "alertmanager:9093"
+
+# Alert rule definitions
+rule_files:
+  - "alerts.yml"
+  - "rules_besu.yml"
+
+# Scrape job configurations
+scrape_configs:
+  # ----------------------------------------------------------------------------
+  # 1. Besu Validator Nodes (Consensus Tier)
+  # High-frequency 5s scrape interval to immediately detect QBFT round stalls
+  # Metric categories enabled on Besu:
+  # --metrics-enabled=true --metrics-port=9545 --metrics-category=ETH,BLOCKCHAIN,PEER,JVM,PROCESS,RPC,TRANSACTION,QBFT
+  # ----------------------------------------------------------------------------
+  - job_name: "besu-validators"
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    honor_labels: true
+    static_configs:
+      - targets:
+          - "val-growww-core:9545"
+        labels:
+          instance: "val-growww-core"
+          role: "validator"
+          validator_index: "0"
+          organization: "Growww-Exchange"
+          region: "ap-south-1a"
+          availability_zone: "ap-south-1a"
+          tier: "consensus"
+
+      - targets:
+          - "val-custodian-nsdl:9545"
+        labels:
+          instance: "val-custodian-nsdl"
+          role: "validator"
+          validator_index: "1"
+          organization: "NSDL-Custodian"
+          region: "ap-south-1b"
+          availability_zone: "ap-south-1b"
+          tier: "consensus"
+
+      - targets:
+          - "val-clearing-corp:9545"
+        labels:
+          instance: "val-clearing-corp"
+          role: "validator"
+          validator_index: "2"
+          organization: "Clearing-Corporation"
+          region: "ap-south-1c"
+          availability_zone: "ap-south-1c"
+          tier: "consensus"
+
+      - targets:
+          - "val-gift-city:9545"
+        labels:
+          instance: "val-gift-city"
+          role: "validator"
+          validator_index: "3"
+          organization: "GIFT-City-Fintech"
+          region: "ap-south-2a"
+          availability_zone: "ap-south-2a"
+          tier: "consensus"
+
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: "(besu_blockchain_.*|besu_qbft_.*|besu_peers_.*|besu_transaction_pool_.*|besu_executors_.*|besu_rocksdb_.*|jvm_memory_.*|jvm_gc_.*|process_.*)"
+        action: keep
+
+  # ----------------------------------------------------------------------------
+  # 2. Besu JSON-RPC Relayer Nodes (Ingress & Settlement Gateway Tier)
+  # High throughput transaction injection and state query monitoring
+  # ----------------------------------------------------------------------------
+  - job_name: "besu-rpc-nodes"
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    honor_labels: true
+    static_configs:
+      - targets:
+          - "rpc-relayer-01:9545"
+        labels:
+          instance: "rpc-relayer-01"
+          role: "rpc-relayer"
+          organization: "Growww-Exchange"
+          region: "ap-south-1a"
+          tier: "rpc-gateway"
+
+      - targets:
+          - "rpc-relayer-02:9545"
+        labels:
+          instance: "rpc-relayer-02"
+          role: "rpc-relayer"
+          organization: "Growww-Exchange"
+          region: "ap-south-1b"
+          tier: "rpc-gateway"
+
+  # ----------------------------------------------------------------------------
+  # 3. Besu Observer & Compliance Audit Archive Nodes
+  # Full archival state for SEBI compliance and audit queries
+  # ----------------------------------------------------------------------------
+  - job_name: "besu-observers"
+    metrics_path: "/metrics"
+    scrape_interval: 10s
+    scrape_timeout: 8s
+    honor_labels: true
+    static_configs:
+      - targets:
+          - "observer-01:9545"
+        labels:
+          instance: "observer-01"
+          role: "observer-archive"
+          organization: "SEBI-Auditor-Gateway"
+          region: "ap-south-1a"
+          tier: "compliance"
+
+      - targets:
+          - "observer-02:9545"
+        labels:
+          instance: "observer-02"
+          role: "observer-archive"
+          organization: "Growww-Analytics"
+          region: "ap-south-1b"
+          tier: "compliance"
+
+  # ----------------------------------------------------------------------------
+  # 4. Web3Signer HSM Sidecars (Validator Key Management Tier)
+  # Monitors HSM signing latency, error rates, and health endpoints
+  # ----------------------------------------------------------------------------
+  - job_name: "web3signer-sidecars"
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    static_configs:
+      - targets:
+          - "signer-val-growww-core:9001"
+        labels:
+          instance: "signer-val-growww-core"
+          node_target: "val-growww-core"
+          key_vault: "aws-kms-ap-south-1a"
+          tier: "hsm-signer"
+
+      - targets:
+          - "signer-val-custodian-nsdl:9001"
+        labels:
+          instance: "signer-val-custodian-nsdl"
+          node_target: "val-custodian-nsdl"
+          key_vault: "aws-kms-ap-south-1b"
+          tier: "hsm-signer"
+
+      - targets:
+          - "signer-val-clearing-corp:9001"
+        labels:
+          instance: "signer-val-clearing-corp"
+          node_target: "val-clearing-corp"
+          key_vault: "aws-kms-ap-south-1c"
+          tier: "hsm-signer"
+
+      - targets:
+          - "signer-val-gift-city:9001"
+        labels:
+          instance: "signer-val-gift-city"
+          node_target: "val-gift-city"
+          key_vault: "hsm-gift-city-ap-south-2a"
+          tier: "hsm-signer"
+
+  # ----------------------------------------------------------------------------
+  # 5. Linux Node Exporters (Host Hardware & OS Telemetry)
+  # NVMe storage, CPU, RAM, and network throughput across bare-metal instances
+  # ----------------------------------------------------------------------------
+  - job_name: "node-exporters"
+    metrics_path: "/metrics"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - "val-growww-core:9100"
+          - "val-custodian-nsdl:9100"
+          - "val-clearing-corp:9100"
+          - "val-gift-city:9100"
+          - "rpc-relayer-01:9100"
+          - "rpc-relayer-02:9100"
+          - "observer-01:9100"
+          - "observer-02:9100"
+        labels:
+          component: "host-os"
+          tier: "infrastructure"
+
+  # ----------------------------------------------------------------------------
+  # 6. Active Synthetic Health Prober Daemon
+  # Queries zero-value JSON-RPC calls and extraData signatures every 2s
+  # ----------------------------------------------------------------------------
+  - job_name: "consensus-health-prober"
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    static_configs:
+      - targets:
+          - "prober:8080"
+        labels:
+          instance: "besu-qbft-prober"
+          service: "active-synthetic-monitor"
+          tier: "synthetic-probe"

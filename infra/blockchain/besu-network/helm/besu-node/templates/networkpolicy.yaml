@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "besu-node.fullname" . }}-netpol
+  labels:
+    app.kubernetes.io/name: {{ include "besu-node.name" . }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "besu-node.name" . }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow P2P traffic from consortium peers
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.network.p2pPort }}
+    # Allow metrics scraping from Prometheus
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.network.metricsPort }}
+    {{- if ne .Values.nodeProfile "validator" }}
+    # Allow RPC from authenticated internal services
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.network.rpcHttpPort }}
+        - protocol: TCP
+          port: {{ .Values.network.rpcWsPort }}
+    {{- end }}
+  egress:
+    - {}

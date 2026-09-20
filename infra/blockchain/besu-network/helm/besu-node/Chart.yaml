@@ -1,0 +1,6 @@
+apiVersion: v2
+name: besu-node
+description: Helm chart for deploying Hyperledger Besu QBFT nodes (validator, rpc-relayer, observer)
+type: application
+version: 1.0.0
+appVersion: "24.1.0"

@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "besu-node.fullname" . }}-config
+  labels:
+    app.kubernetes.io/name: {{ include "besu-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  config.toml: |
+    genesis-file = "/etc/besu/genesis.json"
+    data-path = "/var/lib/besu/data"
+    p2p-enabled = true
+    p2p-port = {{ .Values.network.p2pPort }}
+    discovery-enabled = true
+    max-peers = 50
+    data-storage-format = "{{ .Values.config.dataStorageFormat }}"
+    sync-mode = "{{ .Values.config.syncMode }}"
+    logging = "{{ .Values.config.logging }}"
+    metrics-enabled = {{ .Values.config.metricsEnabled }}
+    metrics-host = "0.0.0.0"
+    metrics-port = {{ .Values.network.metricsPort }}
+    permissions-nodes-contract-enabled = {{ .Values.config.permissionsNodesContractEnabled }}
+    permissions-accounts-contract-enabled = {{ .Values.config.permissionsAccountsContractEnabled }}
+    {{- if ne .Values.nodeProfile "validator" }}
+    rpc-http-enabled = true
+    rpc-http-host = "0.0.0.0"
+    rpc-http-port = {{ .Values.network.rpcHttpPort }}
+    rpc-http-api = ["ETH", "NET", "WEB3", "PERM"]
+    rpc-ws-enabled = true
+    rpc-ws-host = "0.0.0.0"
+    rpc-ws-port = {{ .Values.network.rpcWsPort }}
+    rpc-ws-api = ["ETH", "NET", "WEB3", "PERM"]
+    {{- end }}

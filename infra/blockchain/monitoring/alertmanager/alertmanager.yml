@@ -1,0 +1,102 @@
+# ==============================================================================
+# Prometheus Alertmanager Routing Configuration
+# Project: Growww NBSE Financial Exchange Permissioned Blockchain Ledger
+# File: infra/blockchain/monitoring/alertmanager/alertmanager.yml
+# ==============================================================================
+
+global:
+  resolve_timeout: 5m
+  pagerduty_url: "https://events.pagerduty.com/v2/enqueue"
+  slack_api_url: "ENV_SLACK_WEBHOOK_URL"
+
+route:
+  receiver: "slack-blockchain-ops-default"
+  group_by: ["alertname", "cluster", "component"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 2h
+
+  routes:
+    # Critical P1 Alerts (Consensus stalled, quorum lost, node down) -> PagerDuty + Slack Urgent
+    - match:
+        severity: critical
+      receiver: "pagerduty-blockchain-oncall"
+      group_wait: 5s
+      repeat_interval: 15m
+      continue: true
+
+    - match:
+        severity: critical
+      receiver: "slack-blockchain-ops-critical"
+      group_wait: 5s
+      repeat_interval: 30m
+
+    # Warning P2 Alerts (Peer latency, high disk, txpool congestion) -> Slack
+    - match:
+        severity: warning
+      receiver: "slack-blockchain-ops-warnings"
+      group_wait: 30s
+      repeat_interval: 4h
+
+inhibit_rules:
+  # Inhibit height divergence and round change warnings if the consensus is already stalled
+  - source_match:
+      alertname: "BesuConsensusStalled"
+    target_match_re:
+      alertname: "BesuValidatorHeightDivergence|BesuQBFTRoundChangeTriggered"
+    equal: ["cluster"]
+
+  # Inhibit low peer count alerts if the entire validator node is down
+  - source_match:
+      alertname: "BesuValidatorDown"
+    target_match:
+      alertname: "BesuPeerCountCriticallyLow"
+    equal: ["instance"]
+
+receivers:
+  # PagerDuty Primary On-Call Dispatcher
+  - name: "pagerduty-blockchain-oncall"
+    pagerduty_configs:
+      - service_key: "ENV_PAGERDUTY_BESU_INTEGRATION_KEY"
+        severity: "{{ if eq .CommonLabels.severity \"critical\" }}critical{{ else }}warning{{ end }}"
+        description: "[{{ .Status | toUpper }}] {{ .CommonAnnotations.summary }} - {{ .CommonLabels.instance }}"
+        details:
+          alertname: "{{ .CommonLabels.alertname }}"
+          component: "{{ .CommonLabels.component }}"
+          impact: "{{ .CommonAnnotations.impact }}"
+          action_required: "{{ .CommonAnnotations.action_required }}"
+          runbook_url: "{{ .CommonAnnotations.runbook_url }}"
+          firing_instances: "{{ range .Alerts }}{{ .Labels.instance }} {{ end }}"
+        client: "Prometheus-Alertmanager"
+        client_url: "https://grafana.growww.internal/d/growww-besu-consortium"
+
+  # Slack Critical Operations Channel (#blockchain-ops-sev1)
+  - name: "slack-blockchain-ops-critical"
+    slack_configs:
+      - channel: "#blockchain-ops-sev1"
+        send_resolved: true
+        title: "[{{ .Status | toUpper }}][P1-CRITICAL] {{ .CommonAnnotations.summary }}"
+        text: >-
+          *Description:* {{ .CommonAnnotations.description }}
+          *Impact:* {{ .CommonAnnotations.impact }}
+          *Action:* {{ .CommonAnnotations.action_required }}
+          *Runbook:* <{{ .CommonAnnotations.runbook_url }}|Runbook RBK-OPS-310>
+          *Dashboard:* <https://grafana.growww.internal/d/growww-besu-consortium|Consortium Live Telemetry>
+
+  # Slack Warning Operations Channel (#blockchain-ops-alerts)
+  - name: "slack-blockchain-ops-warnings"
+    slack_configs:
+      - channel: "#blockchain-ops-alerts"
+        send_resolved: true
+        title: "[{{ .Status | toUpper }}][P2-WARNING] {{ .CommonAnnotations.summary }}"
+        text: >-
+          *Description:* {{ .CommonAnnotations.description }}
+          *Impact:* {{ .CommonAnnotations.impact }}
+          *Node:* `{{ .CommonLabels.instance }}`
+          *Runbook:* <{{ .CommonAnnotations.runbook_url }}|Open Runbook>
+
+  - name: "slack-blockchain-ops-default"
+    slack_configs:
+      - channel: "#blockchain-ops-telemetry"
+        send_resolved: true
+        title: "[{{ .Status | toUpper }}] {{ .CommonAnnotations.summary }}"
