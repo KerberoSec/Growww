@@ -89,22 +89,22 @@ type FeeScheduleConfig struct {
 	SEBIChargeRate       float64 // 0.000001 (₹10 per crore)
 }
 
-// DefaultFeeScheduleConfig provides standard institutional exchange fee schedules.
+// DefaultFeeScheduleConfig returns Growww's zero-fee schedule (0.00% maker, 0.00% taker across all tiers).
 func DefaultFeeScheduleConfig() FeeScheduleConfig {
 	return FeeScheduleConfig{
 		VIPTiers: []VIPTier{
-			{TierLevel: 0, MinVolumeUSD: 0, MakerFeeBps: 10.0, TakerFeeBps: 20.0},
-			{TierLevel: 1, MinVolumeUSD: 100_000, MakerFeeBps: 8.0, TakerFeeBps: 16.0},
-			{TierLevel: 2, MinVolumeUSD: 1_000_000, MakerFeeBps: 6.0, TakerFeeBps: 12.0},
-			{TierLevel: 3, MinVolumeUSD: 5_000_000, MakerFeeBps: 4.0, TakerFeeBps: 8.0},
-			{TierLevel: 4, MinVolumeUSD: 20_000_000, MakerFeeBps: 2.0, TakerFeeBps: 5.0},
-			{TierLevel: 5, MinVolumeUSD: 50_000_000, MakerFeeBps: 0.0, TakerFeeBps: 3.0},  // Zero maker fee
-			{TierLevel: 6, MinVolumeUSD: 100_000_000, MakerFeeBps: -1.0, TakerFeeBps: 2.0}, // Maker rebate
+			{TierLevel: 0, MinVolumeUSD: 0, MakerFeeBps: 0.0, TakerFeeBps: 0.0},
+			{TierLevel: 1, MinVolumeUSD: 100_000, MakerFeeBps: 0.0, TakerFeeBps: 0.0},
+			{TierLevel: 2, MinVolumeUSD: 1_000_000, MakerFeeBps: 0.0, TakerFeeBps: 0.0},
+			{TierLevel: 3, MinVolumeUSD: 5_000_000, MakerFeeBps: 0.0, TakerFeeBps: 0.0},
+			{TierLevel: 4, MinVolumeUSD: 20_000_000, MakerFeeBps: 0.0, TakerFeeBps: 0.0},
+			{TierLevel: 5, MinVolumeUSD: 50_000_000, MakerFeeBps: 0.0, TakerFeeBps: 0.0},
+			{TierLevel: 6, MinVolumeUSD: 100_000_000, MakerFeeBps: 0.0, TakerFeeBps: 0.0},
 		},
-		UtilityTokenDiscount: 0.25,
-		SGFReservePct:        0.25,
-		GSTRate:              0.18,
-		SEBIChargeRate:       0.000001,
+		UtilityTokenDiscount: 0.0,  // No discount needed — already 0%
+		SGFReservePct:        0.0,  // 0.00% — zero fee, zero reserve
+		GSTRate:              0.0,  // 0.00% — no GST on platform fee
+		SEBIChargeRate:       0.0,  // 0.00% — pass-through only; platform does not charge
 	}
 }
 
@@ -133,7 +133,8 @@ func (e *ComprehensiveFeeEngine) GetVIPTier(turnoverUSD float64) VIPTier {
 	return matchedTier
 }
 
-// CalculateFees computes full fee breakdown including statutory levies and SGF allocation.
+// CalculateFees computes full fee breakdown enforcing Growww's 0.00% zero-fee policy.
+// All brokerage, statutory levies (STT, GST, SEBI, stamp duty), and exchange charges are 0.
 func (e *ComprehensiveFeeEngine) CalculateFees(
 	execID, userID, symbol string,
 	assetClass AssetClass,
@@ -147,86 +148,8 @@ func (e *ComprehensiveFeeEngine) CalculateFees(
 	defer e.mu.RUnlock()
 
 	notional := quantity * price
-	tier := e.GetVIPTier(user30DayVolumeUSD)
 
-	// Base brokerage fee bps
-	feeBps := tier.TakerFeeBps
-	if role == RoleMaker {
-		feeBps = tier.MakerFeeBps
-	}
-
-	grossBrokerage := notional * (feeBps / 10000.0)
-
-	// Utility token discount (applies to positive brokerage only)
-	tokenDiscount := 0.0
-	netBrokerage := grossBrokerage
-	if payWithUtilityToken && grossBrokerage > 0 {
-		tokenDiscount = grossBrokerage * e.config.UtilityTokenDiscount
-		netBrokerage = grossBrokerage - tokenDiscount
-	}
-
-	// Statutory Levies depending on AssetClass and Side
-	var stt_ctt, exchangeCharges, stampDuty float64
-
-	switch assetClass {
-	case AssetEquityDelivery:
-		// STT: 0.1% on both Buy and Sell
-		stt_ctt = notional * 0.001
-		// Exchange charges: 0.00345%
-		exchangeCharges = notional * 0.0000345
-		// Stamp duty: 0.015% on Buy only
-		if side == TradeBuy {
-			stampDuty = notional * 0.00015
-		}
-	case AssetEquityIntraday:
-		// STT: 0.025% on Sell only
-		if side == TradeSell {
-			stt_ctt = notional * 0.00025
-		}
-		exchangeCharges = notional * 0.0000345
-		if side == TradeBuy {
-			stampDuty = notional * 0.00003
-		}
-	case AssetFutures:
-		// STT: 0.0125% on Sell only
-		if side == TradeSell {
-			stt_ctt = notional * 0.000125
-		}
-		exchangeCharges = notional * 0.00002
-		if side == TradeBuy {
-			stampDuty = notional * 0.00002
-		}
-	case AssetOptions:
-		// STT: 0.0625% on Sell premium
-		if side == TradeSell {
-			stt_ctt = notional * 0.000625
-		}
-		exchangeCharges = notional * 0.00053
-		if side == TradeBuy {
-			stampDuty = notional * 0.00003
-		}
-	case AssetCryptoSpot, AssetCryptoPerp:
-		// Institutional crypto exchange model: Standard exchange charge
-		exchangeCharges = notional * 0.00001
-	}
-
-	sebiCharges := notional * e.config.SEBIChargeRate
-
-	// GST: 18% on (Net Brokerage + Exchange Charges + SEBI Charges)
-	taxableServices := math.Max(0.0, netBrokerage) + exchangeCharges + sebiCharges
-	gst := taxableServices * e.config.GSTRate
-
-	totalStatutory := stt_ctt + exchangeCharges + sebiCharges + stampDuty + gst
-	totalFeesPayable := netBrokerage + totalStatutory
-
-	// Settlement Guarantee Fund (SGF) Waterfall allocation (25% of net brokerage)
-	sgfContribution := 0.0
-	treasuryVault := 0.0
-	if netBrokerage > 0 {
-		sgfContribution = netBrokerage * e.config.SGFReservePct
-		treasuryVault = netBrokerage - sgfContribution
-	}
-
+	// Growww zero-fee policy: all fees are 0.00%
 	return ComprehensiveFeeBreakdown{
 		ExecutionID:       execID,
 		UserID:            userID,
@@ -237,19 +160,19 @@ func (e *ComprehensiveFeeEngine) CalculateFees(
 		Price:             price,
 		NotionalTurnover:  notional,
 		OrderRole:         role,
-		BaseBrokerageRate: feeBps,
-		GrossBrokerage:    grossBrokerage,
-		TokenDiscount:     tokenDiscount,
-		NetBrokerage:      netBrokerage,
-		STT_CTT:           stt_ctt,
-		ExchangeCharges:   exchangeCharges,
-		SEBICharges:       sebiCharges,
-		StampDuty:         stampDuty,
-		GST:               gst,
-		TotalStatutory:    totalStatutory,
-		TotalFeesPayable:  totalFeesPayable,
-		SGFContribution:   sgfContribution,
-		TreasuryVault:     treasuryVault,
+		BaseBrokerageRate: 0.0,
+		GrossBrokerage:    0.0,
+		TokenDiscount:     0.0,
+		NetBrokerage:      0.0,
+		STT_CTT:           0.0, // 0.00% — zero statutory levy
+		ExchangeCharges:   0.0, // 0.00% — zero exchange charges
+		SEBICharges:       0.0, // 0.00% — zero regulatory fee
+		StampDuty:         0.0, // 0.00% — zero stamp duty
+		GST:               0.0, // 0.00% — no GST on zero fee
+		TotalStatutory:    0.0,
+		TotalFeesPayable:  0.0,
+		SGFContribution:   0.0,
+		TreasuryVault:     0.0,
 		CalculatedAt:      time.Now().UTC(),
 	}
 }

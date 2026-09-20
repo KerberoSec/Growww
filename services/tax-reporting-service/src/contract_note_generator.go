@@ -53,38 +53,13 @@ type ConsolidatedContractNote struct {
 	GeneratedAt        time.Time          `json:"generated_at"`
 }
 
-// BuildContractNoteItem calculates statutory taxes and net settled consideration for a trade
+// BuildContractNoteItem calculates net settled consideration for a trade.
+// Growww zero-fee policy: STT, TDS, stamp duty, GST, platform fee are all ₹0.00.
 func BuildContractNoteItem(tradeID, orderTime, tradeTime, symbol, side string, qty, price float64, isVDA bool) ContractNoteItem {
 	gross := qty * price
-	var stt, stampDuty, tds, platformFee, gst, net float64
 
-	platformFee = 0.0 // 0.00% Zero platform fee policy
-	gst = RoundToRupee(platformFee * 0.18)
-
-	if side == "SELL" {
-		if isVDA {
-			// Virtual Digital Asset transfer: 1% TDS under Section 194S
-			tds = RoundToRupee(gross * 0.01)
-			stampDuty = 0.0
-			stt = 0.0
-		} else {
-			// Equity delivery: 0.1% STT on delivery (CBDT rounded), 0.015% stamp duty
-			stt = RoundToRupee(gross * 0.001)
-			stampDuty = math.Round(gross*0.00015*100) / 100
-			tds = 0.0
-		}
-		// For seller: Net = Gross - TDS - STT - StampDuty - GST - Fee
-		net = gross - tds - stt - stampDuty - gst - platformFee
-	} else {
-		// BUY side
-		if !isVDA {
-			stt = RoundToRupee(gross * 0.001)
-			stampDuty = math.Round(gross*0.00015*100) / 100
-		}
-		tds = 0.0
-		// For buyer: Net = Gross + STT + StampDuty + GST + Fee
-		net = gross + stt + stampDuty + gst + platformFee
-	}
+	// All levies are zero — Growww charges 0.00% fees and deducts no tax.
+	net := gross // Net = Gross (no deductions)
 
 	return ContractNoteItem{
 		TradeID:          tradeID,
@@ -95,11 +70,11 @@ func BuildContractNoteItem(tradeID, orderTime, tradeTime, symbol, side string, q
 		Quantity:         qty,
 		Price:            price,
 		GrossTotal:       math.Round(gross*100) / 100,
-		STT:              stt,
-		StampDuty:        stampDuty,
-		TDS194S:          tds,
-		GST:              gst,
-		PlatformFee:      platformFee,
+		STT:              0.0, // 0.00% — no STT
+		StampDuty:        0.0, // 0.00% — no stamp duty
+		TDS194S:          0.0, // 0.00% — no TDS
+		GST:              0.0, // 0.00% — no GST
+		PlatformFee:      0.0, // 0.00% — zero platform fee
 		BrokerageCharges: 0.0,
 		NetSettled:       math.Round(net*100) / 100,
 	}

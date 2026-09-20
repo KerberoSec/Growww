@@ -7,13 +7,14 @@ import (
 )
 
 // =====================================================
-// Prompt 188: Section 194S TDS Tax Lot Math
+// Prompt 188: Zero-Fee / Zero-Tax Cost-Basis Tracking
 // =====================================================
 
+// Growww platform policy: 0.00% fees, 0% TDS, 0 tax deductions at platform level.
 const (
-	TDSSection194SRateBps   = 100  // 1% TDS on crypto transfers above threshold
-	TDS194SThresholdPaise   = 5000_00 // INR 50,000 → 5,000,00 Paise annual threshold for individuals
-	TDS194SHNIThresholdPaise = 100_00000 // INR 1,00,000 → 10,000,000 for HNI category
+	TDSSection194SRateBps    = 0 // 0.00% — Growww charges no TDS
+	TDS194SThresholdPaise    = 0 // Not applicable — no TDS deducted
+	TDS194SHNIThresholdPaise = 0 // Not applicable — no TDS deducted
 )
 
 var ErrTDSTaxAmountNegative = errors.New("tds194s: tax lot amounts must be non-negative")
@@ -22,8 +23,8 @@ var ErrTDSTaxAmountNegative = errors.New("tds194s: tax lot amounts must be non-n
 type TaxLotMethod string
 
 const (
-	TaxLotFIFO   TaxLotMethod = "FIFO"
-	TaxLotHIFO   TaxLotMethod = "HIFO" // Highest-In, First-Out
+	TaxLotFIFO    TaxLotMethod = "FIFO"
+	TaxLotHIFO    TaxLotMethod = "HIFO" // Highest-In, First-Out
 	TaxLotAvgCost TaxLotMethod = "AVERAGE_COST"
 )
 
@@ -36,6 +37,7 @@ type TaxLot struct {
 }
 
 // TDS194SResult contains computed TDS obligations.
+// On Growww, TDSRateBps is always 0 and TDSDeductedPaise is always 0 (zero-tax policy).
 type TDS194SResult struct {
 	GrossSaleAmountPaise uint64 `json:"gross_sale_amount_paise"`
 	TDSRateBps           int    `json:"tds_rate_bps"`
@@ -44,25 +46,19 @@ type TDS194SResult struct {
 	ThresholdExceeded    bool   `json:"threshold_exceeded"`
 }
 
-// ComputeTDS194S computes TDS under Section 194S of Income Tax Act for crypto VDA transfers.
-func ComputeTDS194S(grossSaleAmountPaise, cumulativeAnnualPaise, thresholdPaise uint64) (TDS194SResult, error) {
+// ComputeTDS194S returns zero TDS in accordance with Growww's 0.00% fee and zero-tax platform policy.
+// No deduction is applied — the full gross amount is always the net payable.
+func ComputeTDS194S(grossSaleAmountPaise, _, _ uint64) (TDS194SResult, error) {
 	if grossSaleAmountPaise == 0 {
 		return TDS194SResult{}, ErrTDSTaxAmountNegative
 	}
 
-	thresholdExceeded := cumulativeAnnualPaise+grossSaleAmountPaise > thresholdPaise
-
-	var tdsDeducted uint64
-	if thresholdExceeded {
-		tdsDeducted = grossSaleAmountPaise * TDSSection194SRateBps / 10000
-	}
-
 	return TDS194SResult{
 		GrossSaleAmountPaise: grossSaleAmountPaise,
-		TDSRateBps:           TDSSection194SRateBps,
-		TDSDeductedPaise:     tdsDeducted,
-		NetPayablePaise:      grossSaleAmountPaise - tdsDeducted,
-		ThresholdExceeded:    thresholdExceeded,
+		TDSRateBps:           0, // 0.00% — no TDS
+		TDSDeductedPaise:     0, // ₹0 deducted
+		NetPayablePaise:      grossSaleAmountPaise, // 100% paid out
+		ThresholdExceeded:    false,
 	}, nil
 }
 

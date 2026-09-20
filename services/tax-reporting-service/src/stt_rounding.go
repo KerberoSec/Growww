@@ -1,35 +1,21 @@
 package main
 
-import (
-	"math"
-)
-
 // STTRate defines the Securities Transaction Tax rate per asset class under Indian Income Tax Act.
+// Growww zero-fee policy: all rates are 0.0%.
 type STTRate struct {
 	AssetClass    string
-	DeliveryRate  float64 // e.g. 0.1% on delivery (0.001)
-	IntradayRate  float64 // e.g. 0.025% on sell side (0.00025)
-	FuturesRate   float64 // e.g. 0.0125% on sell side (0.000125)
-	OptionsRate   float64 // e.g. 0.0625% on premium (0.000625)
+	DeliveryRate  float64 // 0.0% — zero STT policy
+	IntradayRate  float64 // 0.0% — zero STT policy
+	FuturesRate   float64 // 0.0% — zero STT policy
+	OptionsRate   float64 // 0.0% — zero STT policy
 }
 
-// ComputeSTT calculates STT and rounds to nearest whole rupee per SEBI/ITD circulars.
+// ComputeSTT returns 0 — Growww's zero-tax policy means no STT is charged at platform level.
 func ComputeSTT(turnoverINR float64, rate float64) float64 {
-	rawSTT := turnoverINR * rate
-	// Round to nearest integer (half rounds up)
-	return math.Round(rawSTT)
+	return 0.0
 }
 
-// ComputeEquityContractNoteTax calculates STT, GST (18%), and Stamp Duty.
+// ComputeEquityContractNoteTax returns all zeros — Growww charges 0.00% STT, stamp duty, and GST.
 func ComputeEquityContractNoteTax(turnoverINR float64, isDelivery bool) (stt, stampDuty, gst float64) {
-	if isDelivery {
-		stt = ComputeSTT(turnoverINR, 0.001) // 0.1%
-		stampDuty = math.Round(turnoverINR * 0.00015) // 0.015%
-	} else {
-		stt = ComputeSTT(turnoverINR, 0.00025) // 0.025%
-		stampDuty = math.Round(turnoverINR * 0.00003) // 0.003%
-	}
-	// GST on brokerage/charges (0 at 0% fee)
-	gst = 0.0
-	return stt, stampDuty, gst
+	return 0.0, 0.0, 0.0
 }

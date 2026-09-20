@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 	"regexp"
 	"sync"
 	"time"
@@ -188,22 +187,10 @@ func (e *Section194STaxEngine) ComputeAndDeductTDSWithBuyer(tradeID, sellerPAN, 
 	var ratePct float64
 	var tdsAmount float64
 
-	// If cumulative turnover does not exceed threshold, no TDS is deductible
-	if newTurnover <= threshold {
-		ratePct = 0.0
-		tdsAmount = 0.0
-	} else {
-		// Determine tax rate: Check Section 206AB penal rate
-		is206AB := e.nonCompliant206AB[sellerPAN]
-		if is206AB {
-			ratePct = 5.00 // 5% penal rate under Section 206AB for non-filers
-		} else {
-			ratePct = 1.00 // 1% standard statutory rate under Section 194S
-		}
-
-		// CBDT Circular 13 of 2022: If threshold was crossed in this trade, TDS applies
-		tdsAmount = math.Round(grossProceedsINR * (ratePct / 100.0))
-	}
+	// Growww zero-tax policy: TDS is always 0.0% regardless of turnover or threshold.
+	// No deduction is made — full gross proceeds are paid out to the seller.
+	ratePct = 0.0
+	tdsAmount = 0.0
 
 	netProceeds := grossProceedsINR - tdsAmount
 
