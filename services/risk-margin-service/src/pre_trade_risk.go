@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 )
 
@@ -82,7 +83,12 @@ func (e *PreTradeRiskEngine) ValidateOrder(
 	}
 
 	// 2. Order Notional Threshold
-	orderNotionalE8 := (priceE8 * quantityE8) / 1e8
+	pBig := new(big.Int).SetUint64(priceE8)
+	qBig := new(big.Int).SetUint64(quantityE8)
+	mulBig := new(big.Int).Mul(pBig, qBig)
+	divBig := new(big.Int).Div(mulBig, big.NewInt(100_000_000))
+	orderNotionalE8 := divBig.Uint64()
+
 	if e.config.MaxOrderNotionalUSD > 0 && orderNotionalE8 > e.config.MaxOrderNotionalUSD {
 		return fmt.Errorf("order notional %d exceeds maximum single order limit %d",
 			orderNotionalE8, e.config.MaxOrderNotionalUSD)
