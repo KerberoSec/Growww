@@ -14,3 +14,7 @@ harness = false
 [lib]
 name = "order_matching_engine"
 path = "src/lib.rs"
+
+[[bin]]
+name = "order-matching-engine"
+path = "src/main.rs"

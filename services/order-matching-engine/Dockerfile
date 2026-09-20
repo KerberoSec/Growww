@@ -3,12 +3,6 @@ FROM rust:1.78-slim-bookworm AS builder
 
 WORKDIR /build
 
-# Cache dependencies
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo fetch
-
-# Build actual source
 COPY . .
 RUN cargo build --release --locked
 

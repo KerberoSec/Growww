@@ -4,7 +4,7 @@
 **Governing Authorities:** Securities and Exchange Board of India (SEBI) | Financial Intelligence Unit - India (FIU-IND) | Reserve Bank of India (RBI) | Unique Identification Authority of India (UIDAI) | Income Tax Department (CBDT)  
 **Applicable Entity:** Growww Technologies India Private Limited (SEBI Registered Stock Broker / Clearing Member) & NBSE Limited (Consortium Stock Exchange Entity)  
 **Jurisdiction:** Republic of India (Domestic Territory)  
-**Classification:** RESTRICTED — STATUTORY COMPLIANCE & TECHNICAL SPECIFICATION  
+**Classification:** RESTRICTED - STATUTORY COMPLIANCE & TECHNICAL SPECIFICATION  
 **Current Branch:** `Arun`  
 
 ---
@@ -126,10 +126,10 @@ $$\text{PAN Regex: } \wedge[A-Z]{5}[0-9]{4}[A-Z]{1}\$$
 
 | Character Position | Statutory Meaning | Valid Values | Enforcement Rule |
 | :--- | :--- | :--- | :--- |
-| **Characters 1–3** | Alphabetic series | `AAA` to `ZZZ` | Running alphabetic sequence |
+| **Characters 1-3** | Alphabetic series | `AAA` to `ZZZ` | Running alphabetic sequence |
 | **Character 4** | Entity Status Code | `P` (Individual), `C` (Company), `H` (HUF), `F` (Firm), `A` (AOP), `T` (Trust), `B` (BOI), `L` (Local Authority), `J` (Artificial Juridical Person), `G` (Govt) | For retail domestic onboarding, **must equal `P`**. For domestic corporate onboarding, must equal `C`, `H`, `F`, or `T`. |
 | **Character 5** | Surname / Last Name Initial | `A` to `Z` | Must match the first character of the applicant's legal surname entered during onboarding. |
-| **Characters 6–9** | Sequential numeric digits | `0001` to `9999` | Sequential system digits |
+| **Characters 6-9** | Sequential numeric digits | `0001` to `9999` | Sequential system digits |
 | **Character 10** | Alphabetic Check Digit | `A` to `Z` | Validated against the Income Tax Department checksum formula |
 
 #### 2.1.2 NSDL / Protean API Integration & Status Verification
@@ -335,8 +335,8 @@ $$W_{\text{inc}} = 0.20, \quad W_{\text{occ}} = 0.35, \quad W_{\text{geo}} = 0.2
 | Annual Income Bracket (INR) | Risk Score ($S_{\text{inc}}$) | Regulatory Rationale |
 | :--- | :--- | :--- |
 | **Below ₹5,00,000** | 10 | Mass retail retail base; low money laundering exposure |
-| **₹5,00,000 – ₹25,00,000** | 20 | Middle-income retail; standard trading volumes |
-| **₹25,00,000 – ₹1,00,00,000** | 35 | Affluent / Mass affluent; moderate portfolio size |
+| **₹5,00,000 - ₹25,00,000** | 20 | Middle-income retail; standard trading volumes |
+| **₹25,00,000 - ₹1,00,00,000** | 35 | Affluent / Mass affluent; moderate portfolio size |
 | **Above ₹1,00,00,000 (High Net Worth)** | 50 | High capital velocity; potential high-volume structuring risks |
 
 #### 4.2.2 Factor 2: Occupation & Beneficial Ownership Profile ($S_{\text{occ}}$)
@@ -384,9 +384,9 @@ graph LR
 
 | Risk Tier | Score Range | Customer Due Diligence Regime | Re-KYC Cycle | Surveillance Intensity |
 | :--- | :--- | :--- | :--- | :--- |
-| **LOW RISK** | 0 – 39 | **Simplified / Standard CDD:** Automated verification of PAN, Aadhaar, and Bank Account. | **Every 10 Years** (with annual in-app self-declaration) | Automated monthly batch anomaly sweep |
-| **MEDIUM RISK** | 40 – 69 | **Standard CDD + Source of Wealth:** Declarations required for annual income and net worth. | **Every 8 Years** | Bi-weekly transaction reconciliation and delta sanctions scan |
-| **HIGH RISK** | 70 – 100 | **Enhanced Due Diligence (EDD):** Mandatory proof of income (ITR), live V-CIP, Principal Officer approval. | **Every 2 Years** | Real-time continuous transaction monitoring; automated STR triggers |
+| **LOW RISK** | 0 - 39 | **Simplified / Standard CDD:** Automated verification of PAN, Aadhaar, and Bank Account. | **Every 10 Years** (with annual in-app self-declaration) | Automated monthly batch anomaly sweep |
+| **MEDIUM RISK** | 40 - 69 | **Standard CDD + Source of Wealth:** Declarations required for annual income and net worth. | **Every 8 Years** | Bi-weekly transaction reconciliation and delta sanctions scan |
+| **HIGH RISK** | 70 - 100 | **Enhanced Due Diligence (EDD):** Mandatory proof of income (ITR), live V-CIP, Principal Officer approval. | **Every 2 Years** | Real-time continuous transaction monitoring; automated STR triggers |
 
 ---
 
@@ -569,11 +569,11 @@ stateDiagram-v2
     Frozen --> Active : Full Remediation & Principal Officer Approval
 ```
 
-1. **Grace Period (Day 1 to 30 Post-Expiry) — `RESTRICTED_TRADING`:**
+1. **Grace Period (Day 1 to 30 Post-Expiry) - `RESTRICTED_TRADING`:**
    - Buying new fractional equity tokens is blocked.
    - Depositing new INR funds is blocked.
    - Selling existing holdings to INR and withdrawing to the verified bank account remains active.
-2. **Hard Suspension (Day 31+ Post-Expiry) — `FROZEN_RE_KYC_OVERDUE`:**
+2. **Hard Suspension (Day 31+ Post-Expiry) - `FROZEN_RE_KYC_OVERDUE`:**
    - All account operations are suspended.
    - The compliance relayer submits a revocation transaction to `ComplianceRegistry.sol` on Hyperledger Besu, blocking all on-chain DvP settlements and token transfers.
    - Account can only be unlocked through a complete re-onboarding cycle approved by compliance officers.
@@ -866,7 +866,7 @@ This Domestic KYC/AML & Prevention of Money Laundering Policy document has been 
 +---------------------------------------------------------------------------------------------------+
 | Principal Officer (PMLA):                                                                         |
 | Name: R. Sundararajan, FCS                                                                        |
-| Designation: Vice President & Principal Officer — Regulatory Compliance                           |
+| Designation: Vice President & Principal Officer - Regulatory Compliance                           |
 | Status: APPROVED & RATIFIED                                                                       |
 | Date: 2026-09-19                                                                                  |
 |                                                                                                   |

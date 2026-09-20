@@ -1,7 +1,7 @@
 # Runbook: Hyperledger Besu QBFT Consensus Stall Incident Response & Disaster Recovery
 
 **Runbook ID:** RBK-OPS-310  
-**Severity Tier:** P1 (Critical) — SEBI Material Market Infrastructure Incident  
+**Severity Tier:** P1 (Critical) - SEBI Material Market Infrastructure Incident  
 **Authority:** Blockchain Infrastructure Lead / SRE Incident Commander / Clearing & Settlement Operations Lead  
 **SLA:** Block production recovery within 5 minutes; SEBI regulatory preliminary notification within 2 hours.  
 
@@ -206,7 +206,7 @@ kubectl -n blockchain-system logs -l app.kubernetes.io/name=besu-validator --tai
 
 ---
 
-### Scenario E: Total Quorum Loss ($F \ge 2$ Offline) — Disaster Recovery
+### Scenario E: Total Quorum Loss ($F \ge 2$ Offline) - Disaster Recovery
 
 **Root Cause:** Catastrophic multi-AZ cloud outage or corrupted shared block state affecting 2 or more validators simultaneously. Quorum ($3/4$) is broken.
 

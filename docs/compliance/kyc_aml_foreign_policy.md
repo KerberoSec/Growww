@@ -140,20 +140,20 @@ L898902C36UTO7408122F1204159ZE184226B<<<<<10
 ```
 
 #### Line 1 Field Decomposition:
-- Positions 1–2: Document Code (`P<` for Passport)
-- Positions 3–5: Issuing Country or Organization (ISO 3166-1 alpha-3, e.g., `GBR`, `DEU`, `USA`)
-- Positions 6–44: Holder's Legal Name (Primary Identifier `<<` Secondary Identifiers)
+- Positions 1-2: Document Code (`P<` for Passport)
+- Positions 3-5: Issuing Country or Organization (ISO 3166-1 alpha-3, e.g., `GBR`, `DEU`, `USA`)
+- Positions 6-44: Holder's Legal Name (Primary Identifier `<<` Secondary Identifiers)
 
 #### Line 2 Field Decomposition & Check Digit Algorithm:
-- Positions 1–9: Passport Document Number
+- Positions 1-9: Passport Document Number
 - Position 10: Check Digit of Passport Number
-- Positions 11–13: Nationality (ISO 3166-1 alpha-3)
-- Positions 14–19: Date of Birth (`YYMMDD`)
+- Positions 11-13: Nationality (ISO 3166-1 alpha-3)
+- Positions 14-19: Date of Birth (`YYMMDD`)
 - Position 20: Check Digit of Date of Birth
 - Position 21: Sex (`M`, `F`, or `<` for unspecified)
-- Positions 22–27: Date of Expiry (`YYMMDD`)
+- Positions 22-27: Date of Expiry (`YYMMDD`)
 - Position 28: Check Digit of Date of Expiry
-- Positions 29–42: Optional Personal Number / National ID
+- Positions 29-42: Optional Personal Number / National ID
 - Position 43: Check Digit of Optional Data
 - Position 44: Composite Check Digit over lines and digits
 
@@ -161,8 +161,8 @@ L898902C36UTO7408122F1204159ZE184226B<<<<<10
 Every check digit in the MRZ is calculated using sequential weights of `7`, `3`, `1` applied iteratively across the alphanumeric characters:
 $$\text{Check Digit} = \left( \sum_{i=1}^{n} c_i \times w_i \right) \pmod{10}$$
 where alphanumeric values map to:
-- `0`–`9` $\rightarrow 0$–$9$
-- `A`–`Z` $\rightarrow 10$–$35$
+- `0`-`9` $\rightarrow 0$-$9$
+- `A`-`Z` $\rightarrow 10$-$35$
 - Filler `<` $\rightarrow 0$
 - Repeating weights $w \in [7, 3, 1, 7, 3, 1, \dots]$
 

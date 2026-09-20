@@ -1123,4 +1123,4 @@ This architecture specification has undergone formal technical review and mathem
 | **Ananya R.** | Head of Regulatory Compliance & Depository Operations | Growww Financial Services | `0x5a4b3c2d1e0f9876...` (ECDSA) | **APPROVED** | 2026-09-19 |
 
 ---
-*End of Specification — SPEC-ARCH-007-POR*
+*End of Specification - SPEC-ARCH-007-POR*

@@ -23,8 +23,10 @@ jobs:
           # Verify no unicode em-dash or en-dash characters in markdown spec files
           # (spec docs must use ASCII hyphens only for cross-platform tooling compatibility)
           dashes = []
+          ignored_dirs = {".git", "node_modules", "vendor", ".cache", "lib"}
           for dp, dn, fn in os.walk(root):
-              if ".git" in dp: continue
+              if any(ig in dp.split(os.sep) for ig in ignored_dirs):
+                  continue
               for f in fn:
                   if f.endswith(".md"):
                       p = os.path.join(dp, f)

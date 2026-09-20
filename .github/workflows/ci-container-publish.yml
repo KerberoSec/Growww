@@ -20,13 +20,13 @@ jobs:
         service:
           - name: api-gateway
             context: services/api-gateway
-            dockerfile: services/api-gateway/Dockerfile
+            dockerfile: Dockerfile
           - name: matching-engine
             context: services/order-matching-engine
-            dockerfile: services/order-matching-engine/Dockerfile
+            dockerfile: Dockerfile
           - name: trade-settlement-service
             context: services/trade-settlement-service
-            dockerfile: services/trade-settlement-service/Dockerfile
+            dockerfile: Dockerfile
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
         id: build-image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ${{ matrix.service.context }}
           file: ${{ matrix.service.dockerfile }}
           push: false
           load: true

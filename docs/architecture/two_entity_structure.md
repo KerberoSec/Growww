@@ -13,10 +13,10 @@
 
 Growww / NBSE operates under a dual-entity institutional architecture engineered to satisfy strict, non-negotiable jurisdictional boundaries across the Republic of India and the Gujarat International Finance Tec-City International Financial Services Centre (GIFT City IFSC):
 
-1. **Entity A — Domestic Indian Regulated Entity (`Growww Technologies India Private Limited`):**  
+1. **Entity A - Domestic Indian Regulated Entity (`Growww Technologies India Private Limited`):**  
    Incorporated under the Companies Act 2013, domiciled in Mumbai and Bangalore, operating under the regulatory purview of the Securities and Exchange Board of India (SEBI) and the Reserve Bank of India (RBI). Entity A maintains registered depository participant and custodian relationships with National Securities Depository Limited (NSDL) and Central Depository Services Limited (CDSL), integrates with domestic Indian clearing rails (UPI, IMPS, NEFT, RTGS, e₹ CBDC), and manages domestic retail/HNI trading accounts.
 
-2. **Entity B — International Gateway Entity (`Growww International IFSC Private Limited`):**  
+2. **Entity B - International Gateway Entity (`Growww International IFSC Private Limited`):**  
    Incorporated in GIFT City Special Economic Zone (SEZ), Gandhinagar, Gujarat, operating under the sovereign statutory jurisdiction of the International Financial Services Centres Authority (IFSCA) pursuant to the IFSCA Act 2019. Entity B serves as the international capital gateway, managing foreign investor onboarding (compliant with Financial Action Task Force [FATF] standards and global sanctions screening), multi-currency funding rails (USD, EUR, GBP, AED, USDT), foreign exchange (FX) conversion, and cross-border tokenized asset access under Section 47(viiab) of the Indian Income Tax Act 1961.
 
 ```
@@ -541,10 +541,10 @@ The platform enforces total failure domain isolation:
 +-------------------------------------------------------------+-------------------------------------------------------------+
 | RECOVERY PARAMETER                                          | JURISDICTIONAL SLA SPECIFICATION                            |
 +-------------------------------------------------------------+-------------------------------------------------------------+
-| Recovery Time Objective (RTO) — Local AZ Failover           | < 5 seconds (Automated Patroni / Besu leader election)      |
-| Recovery Time Objective (RTO) — Cross-Entity Disconnect     | < 15 seconds (Graceful circuit breaking & queue fallback)  |
-| Recovery Point Objective (RPO) — Database State             | 0 (Synchronous replication within region)                  |
-| Recovery Point Objective (RPO) — Ledger Finality            | 0 (QBFT deterministic finality; zero reorgs)               |
+| Recovery Time Objective (RTO) - Local AZ Failover           | < 5 seconds (Automated Patroni / Besu leader election)      |
+| Recovery Time Objective (RTO) - Cross-Entity Disconnect     | < 15 seconds (Graceful circuit breaking & queue fallback)  |
+| Recovery Point Objective (RPO) - Database State             | 0 (Synchronous replication within region)                  |
+| Recovery Point Objective (RPO) - Ledger Finality            | 0 (QBFT deterministic finality; zero reorgs)               |
 | mTLS Handshake Overhead                                     | < 8 milliseconds over 10 Gbps Direct Connect                |
 | Gateway Throughput Capacity                                 | > 15,000 DvP settlement instructions per second             |
 +-------------------------------------------------------------+-------------------------------------------------------------+

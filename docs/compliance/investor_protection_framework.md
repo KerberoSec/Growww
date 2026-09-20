@@ -29,9 +29,9 @@ $$S_{\text{composite}} = 0.35 \cdot S_{\text{experience}} + 0.30 \cdot S_{\text{
 ### 3.2 Suitability Tiers
 | Tier Score | Investor Profile | Max Order Size | Allowed Products |
 | :--- | :--- | :--- | :--- |
-| **0 – 39** | Conservative / Novice | ₹25,000 / trade | Liquid Blue-Chip Equities, G-Secs |
-| **40 – 69** | Moderate / Balanced | ₹2,50,000 / trade | Equities, Broad Indices, Paper Demo |
-| **70 – 100** | Aggressive / Advanced | Unlimited (Margin bound) | Full Spot Market, Large Block Orders |
+| **0 - 39** | Conservative / Novice | ₹25,000 / trade | Liquid Blue-Chip Equities, G-Secs |
+| **40 - 69** | Moderate / Balanced | ₹2,50,000 / trade | Equities, Broad Indices, Paper Demo |
+| **70 - 100** | Aggressive / Advanced | Unlimited (Margin bound) | Full Spot Market, Large Block Orders |
 
 ---
 
@@ -51,7 +51,7 @@ stateDiagram-v2
     RegulatoryClosure --> [*]
 ```
 
-- **Level 1 (Support Desk):** First-line resolution within 24–48 hours.
+- **Level 1 (Support Desk):** First-line resolution within 24-48 hours.
 - **Level 2 (Compliance Officer):** Formal investigation and redressal within 7 working days.
 - **Level 3 (Regulatory Ombudsman / SEBI SCORES):** Automated API push/pull synchronization with SEBI SCORES 2.0 portal for external dispute escalation.
 
