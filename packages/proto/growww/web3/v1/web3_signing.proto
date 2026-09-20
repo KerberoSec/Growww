@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package growww.web3.v1;
+
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+message EIP712Domain {
+  string name = 1;
+  string version = 2;
+  uint64 chain_id = 3;
+  string verifying_contract = 4;
+}
+
+message SpotOrderPayload {
+  string trader = 1;
+  string isin = 2;
+  OrderSide side = 3;
+  uint64 quantity = 4;
+  uint64 price = 5;
+  uint64 nonce = 6;
+  uint64 deadline = 7;
+}
+
+message VerifyOrderSignatureRequest {
+  EIP712Domain domain = 1;
+  SpotOrderPayload order = 2;
+  string signature = 3; // hex encoded secp256k1 signature
+}
+
+message VerifyOrderSignatureResponse {
+  bool is_valid = 1;
+  string recovered_address = 2;
+  string error_message = 3;
+}
+
+message SessionKeyDelegation {
+  string master_trader = 1;
+  string session_key = 2;
+  uint64 valid_until = 3;
+  uint64 max_notional_limit = 4;
+  uint64 nonce = 5;
+  string master_signature = 6;
+}
