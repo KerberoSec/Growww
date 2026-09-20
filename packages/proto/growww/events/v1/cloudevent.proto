@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package growww.events.v1;
+
+option go_package = "github.com/growww/proto/gen/go/events/v1;eventsv1";
+option java_package = "com.growww.proto.events.v1";
+
+message CloudEvent {
+  string id = 1;
+  string source = 2;
+  string spec_version = 3; // "1.0"
+  string type = 4;
+  string subject = 5;
+  int64 time_nanos = 6;
+  string data_content_type = 7;
+  bytes data = 8;
+  
+  // Platform extensions
+  string correlation_id = 9;
+  string actor_id = 10;
+  string entity_id = 11;
+  uint64 sequence_number = 12;
+}
