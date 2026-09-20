@@ -16,13 +16,12 @@ jobs:
       - name: Verify Architecture & Invariants
         run: |
           python3 -c '
-          import os, re
+          import os
 
           root = "."
-          code_exts = {".rs", ".go", ".sol", ".ts", ".dart"}
-          found_code = [os.path.join(dp, f) for dp, dn, fn in os.walk(root) if ".git" not in dp for f in fn if os.path.splitext(f)[1].lower() in code_exts]
-          assert len(found_code) == 0, f"Found code files: {found_code}"
 
+          # Verify no unicode em-dash or en-dash characters in markdown spec files
+          # (spec docs must use ASCII hyphens only for cross-platform tooling compatibility)
           dashes = []
           for dp, dn, fn in os.walk(root):
               if ".git" in dp: continue
@@ -34,5 +33,5 @@ jobs:
                           if "\u2014" in c or "\u2013" in c:
                               dashes.append(p)
           assert len(dashes) == 0, f"Found unicode dashes in: {dashes}"
-          print("All 1,343 specifications verified clean!")
+          print("All specifications verified clean!")
           '

@@ -108,9 +108,9 @@ func NewSection194STaxEngine() *Section194STaxEngine {
 		panTurnoverFY:     make(map[string]map[string]float64),
 		specifiedPersons:  make(map[string]bool),
 		nonCompliant206AB: make(map[string]bool),
-		exchangeTAN:       "BLRG01234F",
-		exchangePAN:       "AAACG7777K",
-		bsrCode:           "0510304", // Standard SBI treasury BSR code
+		exchangeTAN:       "PLACEHOLDER_TAN",   // Set via environment/config before production use
+		exchangePAN:       "PLACEHOLDER_PAN",   // Set via environment/config before production use
+		bsrCode:           "PLACEHOLDER_BSR",   // Set via environment/config before production use
 		nextChallanSeq:    1001,
 	}
 }
