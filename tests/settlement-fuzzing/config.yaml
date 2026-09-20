@@ -1,0 +1,31 @@
+version: "1.0"
+fuzzing_targets:
+  dvp_settlement:
+    concurrency_workers: 16
+    max_batch_size: 500
+    fault_injection:
+      rpc_timeout_rate: 0.05
+      kafka_rebalance_interval_sec: 30
+      redis_disconnect_rate: 0.02
+  sgf_waterfall:
+    clearing_members_count: 50
+    default_probability_per_cycle: 0.15
+    market_drop_max_pct: 40.0
+    haircut_volatility_multiplier: 1.5
+    statutory_core_sgf_floor_paise: 10000000000 # 100 Crore Paise = 10 Crore INR
+  matching_engine:
+    ops_per_second: 100000
+    symbol_universe_size: 20
+    order_types: ["LIMIT", "MARKET", "CANCEL", "IOC", "FOK"]
+    seed: "0xdeadbeef12345678"
+  latency_arbitrage:
+    venues: ["NSE", "BSE", "NBSE", "GIFT_CITY"]
+    jitter_min_ms: 0
+    jitter_max_ms: 250
+    packet_loss_rate: 0.03
+    max_slippage_bps: 15
+  corporate_actions:
+    max_concurrent_splits: 5
+    split_ratios: ["1:2", "1:5", "1:10", "10:1", "5:1"]
+    orders_in_flight_during_rebase: 1000
+    max_allowed_leakage_paise: 1
