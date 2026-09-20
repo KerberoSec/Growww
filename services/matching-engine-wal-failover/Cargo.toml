@@ -1,0 +1,12 @@
+[package]
+name = "matching-engine-wal-failover"
+version = "0.1.0"
+edition = "2021"
+authors = ["Growww Sovereign Architecture Team"]
+description = "High-availability Raft consensus sequencer and append-only WAL with deterministic replay for matching engine"
+
+[dependencies]
+
+[lib]
+name = "matching_engine_wal_failover"
+path = "src/lib.rs"
