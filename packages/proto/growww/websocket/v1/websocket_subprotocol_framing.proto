@@ -4,6 +4,34 @@ package growww.websocket.v1;
 
 option go_package = "growww/packages/proto/growww/websocket/v1;websocketv1";
 
+enum FrameType {
+  FRAME_TYPE_UNSPECIFIED = 0;
+  FRAME_TYPE_HEARTBEAT_PING = 1;
+  FRAME_TYPE_HEARTBEAT_PONG = 2;
+  FRAME_TYPE_SUBSCRIBE = 3;
+  FRAME_TYPE_UNSUBSCRIBE = 4;
+  FRAME_TYPE_MARKET_DEPTH = 5;
+  FRAME_TYPE_TRADE_EXECUTION = 6;
+  FRAME_TYPE_ORDER_UPDATE = 7;
+  FRAME_TYPE_ERROR = 8;
+}
+
+enum SerializationEncoding {
+  SERIALIZATION_ENCODING_UNSPECIFIED = 0;
+  SERIALIZATION_ENCODING_JSON = 1;
+  SERIALIZATION_ENCODING_PROTOBUF = 2;
+}
+
+message WebsocketSubprotocolHeader {
+  uint32 magic_byte = 1;               // 0x4757 (GW)
+  uint32 version = 2;                  // 1
+  FrameType frame_type = 3;
+  SerializationEncoding encoding = 4;
+  uint64 sequence_number = 5;
+  uint64 timestamp_ns = 6;
+  uint32 payload_length = 7;
+}
+
 message WebsocketsubprotocolframingspecRequest {
   string request_id = 1;
   string entity_id = 2;
