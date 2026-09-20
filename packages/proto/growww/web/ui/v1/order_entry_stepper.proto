@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message OrderEntryInput {
+  double price = 1;
+  double quantity = 2;
+  int32 percentage_allocation = 3;
+}
+
+service OrderEntryStepperService {
+  rpc ValidateOrderInputs(OrderEntryInput) returns (OrderEntryInput);
+}

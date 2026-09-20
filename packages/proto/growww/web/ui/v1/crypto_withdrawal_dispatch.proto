@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message WithdrawalDispatchRequest {
+  string asset = 1;
+  string destination_address = 2;
+  double amount = 3;
+  double estimated_network_fee = 4;
+  string totp_token = 5;
+}
+
+service WithdrawalDispatchService {
+  rpc DispatchWithdrawal(WithdrawalDispatchRequest) returns (WithdrawalDispatchRequest);
+}

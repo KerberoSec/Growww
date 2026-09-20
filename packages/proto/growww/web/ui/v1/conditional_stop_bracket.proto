@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message BracketOrderConfig {
+  double take_profit_price = 1;
+  double stop_loss_trigger = 2;
+  double stop_loss_limit = 3;
+  bool is_oco = 4;
+}
+
+service ConditionalBracketService {
+  rpc SubmitBracket(BracketOrderConfig) returns (BracketOrderConfig);
+}

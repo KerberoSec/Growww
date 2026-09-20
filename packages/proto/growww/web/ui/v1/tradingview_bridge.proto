@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message ChartResolutionConfig {
+  string symbol = 1;
+  string resolution = 2;
+  int64 from_timestamp = 3;
+  int64 to_timestamp = 4;
+}
+
+service TradingViewBridgeService {
+  rpc StreamBars(ChartResolutionConfig) returns (ChartResolutionConfig);
+}

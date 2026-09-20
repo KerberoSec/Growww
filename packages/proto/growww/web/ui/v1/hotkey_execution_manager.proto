@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message HotkeyActionMapping {
+  string key_combination = 1;
+  string action_type = 2;
+  double default_size = 3;
+  bool requires_confirmation = 4;
+}
+
+service HotkeyManagerService {
+  rpc RegisterHotkey(HotkeyActionMapping) returns (HotkeyActionMapping);
+}

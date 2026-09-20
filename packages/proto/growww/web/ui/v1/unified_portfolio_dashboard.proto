@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message ConsolidatedNetWorth {
+  string user_id = 1;
+  double equities_inr_value = 2;
+  double gsec_inr_value = 3;
+  double crypto_inr_value = 4;
+  double total_nav_inr = 5;
+}
+
+service UnifiedPortfolioService {
+  rpc GetNetWorth(ConsolidatedNetWorth) returns (ConsolidatedNetWorth);
+}

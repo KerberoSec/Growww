@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message TaprootAddressResponse {
+  string btc_taproot_address = 1; // bc1p...
+  int32 required_confirmations = 2;
+  string qr_data = 3;
+}
+
+service NativeTaprootBtcService {
+  rpc GenerateDepositAddress(TaprootAddressResponse) returns (TaprootAddressResponse);
+}

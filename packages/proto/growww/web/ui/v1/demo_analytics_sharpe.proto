@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message EquityPerformanceData {
+  string user_id = 1;
+  double sharpe_ratio = 2;
+  double max_drawdown = 3;
+  repeated double cumulative_returns = 4;
+}
+
+service EquityCurveAnalyticsService {
+  rpc GetPerformance(EquityPerformanceData) returns (EquityPerformanceData);
+}

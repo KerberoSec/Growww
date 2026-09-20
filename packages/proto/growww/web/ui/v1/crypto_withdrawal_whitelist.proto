@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message WhitelistEntry {
+  string address = 1;
+  string network = 2;
+  string label = 3;
+  uint64 cool_off_expiry_timestamp_ms = 4;
+  bool is_active = 5;
+}
+
+service WhitelistService {
+  rpc AddWhitelistAddress(WhitelistEntry) returns (WhitelistEntry);
+}

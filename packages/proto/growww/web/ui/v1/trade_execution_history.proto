@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message ContractNoteRequest {
+  string user_id = 1;
+  string trade_date = 2;
+  string format = 3; // "PDF" or "JSON"
+}
+
+service TradeHistoryService {
+  rpc DownloadContractNote(ContractNoteRequest) returns (ContractNoteRequest);
+}

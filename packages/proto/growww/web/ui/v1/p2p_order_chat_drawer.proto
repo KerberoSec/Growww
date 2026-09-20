@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message ChatMessageEvent {
+  string order_id = 1;
+  string sender = 2;
+  string encrypted_payload = 3;
+  string utr_reference = 4;
+}
+
+service P2PChatService {
+  rpc SendMessage(ChatMessageEvent) returns (ChatMessageEvent);
+}

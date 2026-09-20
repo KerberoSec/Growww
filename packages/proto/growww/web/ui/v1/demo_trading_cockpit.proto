@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message DemoSimState {
+  string user_id = 1;
+  double virtual_usd_balance = 2;
+  double virtual_inr_balance = 3;
+  bool is_simulation_active = 4;
+}
+
+service DemoCockpitService {
+  rpc GetSimState(DemoSimState) returns (DemoSimState);
+}

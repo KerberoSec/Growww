@@ -1,0 +1,15 @@
+{
+  "name": "growww-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Growww Next-Gen Real World Asset (RWA) Trading Platform Monorepo",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "pnpm@12.4.2"
+}

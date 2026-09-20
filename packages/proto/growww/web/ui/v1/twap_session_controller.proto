@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message TwapSessionConfig {
+  string session_id = 1;
+  double total_volume = 2;
+  int32 duration_minutes = 3;
+  int32 slice_interval_seconds = 4;
+}
+
+service TwapControllerService {
+  rpc StartTwap(TwapSessionConfig) returns (TwapSessionConfig);
+}

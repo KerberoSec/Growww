@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package growww.web.ui.v1;
+
+option go_package = "growww/packages/proto/growww/web/ui/v1;webuiv1";
+
+message GraduationMilestone {
+  string user_id = 1;
+  bool profit_target_reached = 2;
+  bool max_drawdown_respected = 3;
+  bool ready_for_real_trading = 4;
+}
+
+service GraduationService {
+  rpc CheckGraduationEligibility(GraduationMilestone) returns (GraduationMilestone);
+}

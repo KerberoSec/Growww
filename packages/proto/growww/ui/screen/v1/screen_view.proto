@@ -1,0 +1,21 @@
+// Syntax declaration
+syntax = "proto3";
+
+// Package definition for UI screen view contracts
+package growww.ui.screen.v1;
+
+// Option for Go code generation
+option go_package = "growww/packages/proto/growww/ui/screen/v1;screenv1";
+
+// ScreenViewViewState represents the client acceptance and screen state
+message ScreenViewViewState {
+  string user_id = 1;
+  string trading_pair = 2;
+  bool is_active = 3;
+  uint64 last_updated_ms = 4;
+  map<string, string> visual_tokens = 5;
+}
+
+service FluttermasterclientacceptanceverificationsuiteService {
+  rpc RenderScreenView(ScreenViewViewState) returns (ScreenViewViewState);
+}
