@@ -1,0 +1,8 @@
+Contact: mailto:security@growww.in
+Contact: https://hackerone.com/growww_security
+Encryption: https://growww.in/pgp-key.asc
+Acknowledgments: https://growww.in/security/hall-of-fame
+Preferred-Languages: en, hi
+Policy: https://growww.in/security/vulnerability-disclosure-policy
+Hiring: https://growww.in/careers
+Expires: 2027-12-31T23:59:59.000Z

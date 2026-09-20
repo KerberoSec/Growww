@@ -1,0 +1,43 @@
+program_name: "Growww Vulnerability Disclosure & Bug Bounty Program"
+bounty_currency: "INR"
+scope_targets:
+  - asset: "api.growww.in"
+    type: "API"
+    severity_max: "CRITICAL"
+    eligible_for_bounty: true
+  - asset: "app.growww.in"
+    type: "WEB"
+    severity_max: "CRITICAL"
+    eligible_for_bounty: true
+  - asset: "Growww Flutter Mobile App (Android/iOS)"
+    type: "MOBILE"
+    severity_max: "CRITICAL"
+    eligible_for_bounty: true
+  - asset: "Growww Smart Contracts (Besu)"
+    type: "SMART_CONTRACT"
+    severity_max: "CRITICAL"
+    eligible_for_bounty: true
+    contracts:
+      - "DigitalSecurityToken.sol"
+      - "SettlementDvP.sol"
+      - "ComplianceRegistry.sol"
+      - "MultiSigGovernance.sol"
+      - "CircuitBreakerHalt.sol"
+remediation_sla_hours:
+  critical: 24
+  high: 168
+  medium: 720
+  low: 2160
+bounty_reward_range_inr:
+  critical:
+    min: 500000
+    max: 1000000
+  high:
+    min: 150000
+    max: 300000
+  medium:
+    min: 30000
+    max: 75000
+  low:
+    min: 5000
+    max: 15000
