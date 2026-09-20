@@ -27,6 +27,11 @@ class PositionSide(Enum):
     SHORT = "SHORT"
 
 
+class ContractType(Enum):
+    LINEAR = "LINEAR"   # USD-M settled in USDT/USD
+    INVERSE = "INVERSE" # COIN-M settled in underlying crypto (e.g. BTC)
+
+
 class PositionStatus(Enum):
     ACTIVE = "ACTIVE"
     LIQUIDATED = "LIQUIDATED"
@@ -40,10 +45,11 @@ class PerpetualPosition:
     user_id: str
     symbol: str
     side: PositionSide
-    size_contracts: float       # number of contracts
+    size_contracts: float       # number of contracts (units for Linear, USD for Inverse)
     entry_price: float          # in USD
     leverage: int
-    margin: float               # isolated margin in USD
+    margin: float               # isolated margin in settlement currency
+    contract_type: ContractType = ContractType.LINEAR
     status: PositionStatus = PositionStatus.ACTIVE
     realised_pnl: float = 0.0
     accumulated_funding: float = 0.0
@@ -89,7 +95,7 @@ class ADLCandidate:
 # ---------------------------------------------------------------------------
 
 FUNDING_INTERVAL_HOURS: float = 8.0
-FUNDING_RATE_CLAMP: float = 0.0005  # ±5 bps clamp
+FUNDING_RATE_CLAMP: float = 0.0075  # ±0.75% (75 bps) maximum clamp per SEBI/IOSCO guidelines
 DEFAULT_INTEREST_RATE: float = 0.0001  # 1 bp per epoch
 DEFAULT_MAINTENANCE_MARGIN_RATE: float = 0.005  # 0.5 %
 
@@ -205,14 +211,21 @@ class PerpetualsEngine:
         size_contracts: float,
         entry_price: float,
         leverage: int,
+        contract_type: ContractType = ContractType.LINEAR,
     ) -> PerpetualPosition:
-        """Open a new isolated-margin perpetual position."""
+        """Open a new isolated-margin perpetual position (Linear USD-M or Inverse COIN-M)."""
         if leverage < 1:
             raise ValueError("leverage must be >= 1")
         if size_contracts <= 0 or entry_price <= 0:
             raise ValueError("size and entry_price must be positive")
 
-        margin = (size_contracts * entry_price) / leverage
+        if contract_type == ContractType.LINEAR:
+            # Linear USD-M: Margin in USD = (Contracts * EntryPrice) / Leverage
+            margin = (size_contracts * entry_price) / leverage
+        else:
+            # Inverse COIN-M: Margin in Crypto = (SizeUSD / EntryPrice) / Leverage
+            margin = (size_contracts / entry_price) / leverage
+
         pos = PerpetualPosition(
             position_id=str(uuid.uuid4()),
             user_id=user_id,
@@ -222,46 +235,78 @@ class PerpetualsEngine:
             entry_price=entry_price,
             leverage=leverage,
             margin=margin,
+            contract_type=contract_type,
         )
         self.positions[pos.position_id] = pos
         return pos
 
     def unrealised_pnl(self, pos: PerpetualPosition, mark_price: float) -> float:
-        """Calculate unrealised PnL for a position."""
-        if pos.side == PositionSide.LONG:
-            return (mark_price - pos.entry_price) * pos.size_contracts
+        """
+        Calculate unrealised PnL for a position.
+        Linear USD-M: Settled in USD.
+        Inverse COIN-M: Settled in Crypto (e.g. BTC).
+        """
+        if mark_price <= 0:
+            raise ValueError("mark_price must be positive")
+
+        if pos.contract_type == ContractType.LINEAR:
+            if pos.side == PositionSide.LONG:
+                return (mark_price - pos.entry_price) * pos.size_contracts
+            else:
+                return (pos.entry_price - mark_price) * pos.size_contracts
         else:
-            return (pos.entry_price - mark_price) * pos.size_contracts
+            # Inverse: size in USD, PnL in Crypto
+            if pos.side == PositionSide.LONG:
+                return pos.size_contracts * (1.0 / pos.entry_price - 1.0 / mark_price)
+            else:
+                return pos.size_contracts * (1.0 / mark_price - 1.0 / pos.entry_price)
 
     # ---- Liquidation -------------------------------------------------------
 
     def liquidation_price(self, pos: PerpetualPosition) -> float:
         """
         Compute the deterministic liquidation price for an isolated position.
-
-        Long:  liq = entry * (1 - 1/lev + mmr)
-        Short: liq = entry * (1 + 1/lev - mmr)
+        Linear:
+          Long:  liq = entry * (1 - 1/lev + mmr)
+          Short: liq = entry * (1 + 1/lev - mmr)
+        Inverse:
+          Long:  liq = entry / (1 + 1/lev - mmr)
+          Short: liq = entry / (1 - 1/lev + mmr)
         """
         e = pos.entry_price
         lev = pos.leverage
-        if pos.side == PositionSide.LONG:
-            return max(0.0, e * (1.0 - 1.0 / lev + self.mmr))
+        if pos.contract_type == ContractType.LINEAR:
+            if pos.side == PositionSide.LONG:
+                return max(0.0, e * (1.0 - 1.0 / lev + self.mmr))
+            else:
+                return e * (1.0 + 1.0 / lev - self.mmr)
         else:
-            return e * (1.0 + 1.0 / lev - self.mmr)
+            # Inverse contract liquidation price formula
+            if pos.side == PositionSide.LONG:
+                denom = 1.0 + 1.0 / lev - self.mmr
+                return e / denom if denom > 0 else 0.0
+            else:
+                denom = 1.0 - 1.0 / lev + self.mmr
+                return e / denom if denom > 0 else float("inf")
 
     def bankruptcy_price(self, pos: PerpetualPosition) -> float:
         """
         Compute the bankruptcy price (margin fully consumed).
-
-        Long:  bp = entry * (1 - 1/leverage)
-        Short: bp = entry * (1 + 1/leverage)
         """
         e = pos.entry_price
         lev = pos.leverage
-        if pos.side == PositionSide.LONG:
-            return max(0.0, e * (1.0 - 1.0 / lev))
+        if pos.contract_type == ContractType.LINEAR:
+            if pos.side == PositionSide.LONG:
+                return max(0.0, e * (1.0 - 1.0 / lev))
+            else:
+                return e * (1.0 + 1.0 / lev)
         else:
-            return e * (1.0 + 1.0 / lev)
+            if pos.side == PositionSide.LONG:
+                denom = 1.0 + 1.0 / lev
+                return e / denom if denom > 0 else 0.0
+            else:
+                denom = 1.0 - 1.0 / lev
+                return e / denom if denom > 0 else float("inf")
 
     def check_liquidations(self, mark_price: float) -> List[LiquidationEvent]:
         """
