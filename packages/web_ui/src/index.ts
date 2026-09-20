@@ -38,3 +38,4 @@ export * from './components/cross_asset_collateral_slider';
 export * from './components/institutional_rfq_negotiation_window';
 export * from './components/hotkey_macro_config_modal';
 export * from './components/detached_multi_window_layout_manager';
+export * from './components/api_key_developer_portal';
